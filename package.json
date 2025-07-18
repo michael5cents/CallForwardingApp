@@ -23,7 +23,8 @@
     "twilio": "^4.19.0",
     "@anthropic-ai/sdk": "^0.17.1",
     "sqlite3": "^5.1.6",
-    "dotenv": "^16.3.1"
+    "dotenv": "^16.3.1",
+    "socket.io": "^4.7.4"
   },
   "devDependencies": {
     "nodemon": "^3.0.2"

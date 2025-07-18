@@ -7,8 +7,10 @@ A sophisticated Node.js application that intelligently handles incoming calls us
 - **🤖 AI-Powered Call Screening**: Uses Claude AI to analyze unknown callers and intelligently route calls
 - **👥 Contact Whitelisting**: Direct forwarding for known contacts without screening
 - **📞 Flexible Call Routing**: Different handling based on call purpose (Urgent/Sales/Support/Personal/Spam)
-- **📊 Web Dashboard**: Clean interface for managing contacts and viewing call logs
-- **📋 Call Logging**: Complete history with AI-generated summaries
+- **📊 Real-time Dashboard**: Live call monitoring with Socket.io for instant status updates
+- **📋 Call Logging**: Complete history with AI-generated summaries and voicemail recordings
+- **🎵 Voicemail Playback**: In-browser audio playback with authentication bypass
+- **🗑️ Log Management**: Delete individual call logs or clear all history
 - **🔒 Secure Configuration**: Environment-based credential management
 
 ## Architecture
@@ -105,10 +107,12 @@ A sophisticated Node.js application that intelligently handles incoming calls us
 
 ### Web Dashboard
 
-Access the dashboard at `http://localhost:3000` to:
+Access the dashboard at `http://localhost:3001` to:
 
+- **Live Call Monitoring**: Real-time status updates as calls are processed
 - **Manage Contacts**: Add/remove whitelisted contacts for direct forwarding
-- **View Call Logs**: Monitor all incoming calls with AI analysis
+- **View Call Logs**: Monitor all incoming calls with AI analysis and play voicemail recordings
+- **Log Management**: Delete individual logs or clear entire call history
 - **System Status**: Check contact count, recent calls, and AI screening status
 
 ### Call Routing Logic
@@ -139,6 +143,11 @@ Access the dashboard at `http://localhost:3000` to:
 
 ### Call Logs
 - `GET /api/call-logs` - Retrieve call history
+- `DELETE /api/call-logs/:id` - Delete specific call log
+- `DELETE /api/call-logs` - Clear all call logs
+
+### Recording Playback
+- `GET /recording/:recordingSid` - Proxy endpoint for Twilio recordings (bypasses authentication)
 
 ## Database Schema
 
@@ -158,6 +167,7 @@ CREATE TABLE call_logs (
   from_number TEXT NOT NULL,
   status TEXT NOT NULL,
   summary TEXT,
+  recording_url TEXT,
   timestamp DATETIME DEFAULT CURRENT_TIMESTAMP
 );
 ```

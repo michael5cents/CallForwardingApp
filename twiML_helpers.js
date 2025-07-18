@@ -15,7 +15,7 @@ const generateDirectForwardingTwiML = (contactName, personalNumber) => {
     : 'Direct call from whitelisted contact';
   
   response.say({
-    voice: 'alice',
+    voice: 'Polly.Matthew-Neural',
     language: 'en-US'
   }, whisperMessage);
   
@@ -32,25 +32,30 @@ const generateDirectForwardingTwiML = (contactName, personalNumber) => {
 const generateAIGreetingTwiML = () => {
   const response = new twilio.twiml.VoiceResponse();
   
-  // Greeting with personality
+  // Natural human-like message with best voice
   response.say({
-    voice: 'alice',
+    voice: 'Polly.Matthew-Neural',
     language: 'en-US'
-  }, 'Hello, you have reached the virtual assistant. Please state the purpose of your call after the tone.');
+  }, 'Hello. What can I help you with today?');
   
-  // Gather speech input
+  // Gather speech input 
   response.gather({
     input: 'speech',
     speechTimeout: 'auto',
+    timeout: 10,
     action: '/handle-gather',
     method: 'POST'
   });
   
   // Fallback if no speech detected
   response.say({
-    voice: 'alice',
+    voice: 'Polly.Matthew-Neural',
     language: 'en-US'
-  }, 'I did not hear anything. Please try calling again.');
+  }, 'Sorry, I did not hear you. Please try calling back.');
+  
+  // Add a pause before hanging up
+  response.pause({ length: 2 });
+  response.hangup();
   
   return response.toString();
 };
@@ -66,7 +71,7 @@ const generateScreenedForwardingTwiML = (summary, personalNumber) => {
   
   // Whisper with AI analysis
   response.say({
-    voice: 'alice',
+    voice: 'Polly.Matthew-Neural',
     language: 'en-US'
   }, `Screened call about: ${summary}`);
   
@@ -83,19 +88,27 @@ const generateScreenedForwardingTwiML = (summary, personalNumber) => {
 const generateVoicemailTwiML = () => {
   const response = new twilio.twiml.VoiceResponse();
   
-  // Voicemail message
+  // Single voicemail message
   response.say({
-    voice: 'alice',
+    voice: 'Polly.Matthew-Neural',
     language: 'en-US'
-  }, 'Please leave a detailed message after the tone and I will get back to you shortly.');
+  }, 'Please leave a message after the tone. Press pound when finished.');
   
-  // Record the message
+  // Record the message with explicit settings
   response.record({
     action: '/handle-recording',
     method: 'POST',
     maxLength: 60,
-    finishOnKey: '#'
+    finishOnKey: '#',
+    playBeep: true,
+    trim: 'trim-silence'
   });
+  
+  // Fallback if recording fails
+  response.say({
+    voice: 'Polly.Matthew-Neural',
+    language: 'en-US'
+  }, 'Thank you for calling.');
   
   return response.toString();
 };
@@ -109,9 +122,9 @@ const generateRejectionTwiML = () => {
   
   // Polite rejection message
   response.say({
-    voice: 'alice',
+    voice: 'Polly.Matthew-Neural',
     language: 'en-US'
-  }, 'Thank you for calling. Unfortunately, I am unable to take your call at this time. Please try contacting through alternative means. Goodbye.');
+  }, 'Sorry, I cannot take your call right now. Please try again later. Goodbye.');
   
   // Hang up
   response.hangup();
@@ -127,9 +140,9 @@ const generateRecordingCompleteTwiML = () => {
   const response = new twilio.twiml.VoiceResponse();
   
   response.say({
-    voice: 'alice',
+    voice: 'Polly.Matthew-Neural',
     language: 'en-US'
-  }, 'Thank you for your message. I will review it and get back to you soon. Goodbye.');
+  }, 'Thank you for your message. I will get back to you soon. Goodbye.');
   
   response.hangup();
   

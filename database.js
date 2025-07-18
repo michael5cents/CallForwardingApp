@@ -38,6 +38,7 @@ const initializeDatabase = () => {
           from_number TEXT NOT NULL,
           status TEXT NOT NULL,
           summary TEXT,
+          recording_url TEXT,
           timestamp DATETIME DEFAULT CURRENT_TIMESTAMP
         )
       `, (err) => {
@@ -47,7 +48,16 @@ const initializeDatabase = () => {
           return;
         }
         console.log('Call logs table ready.');
-        resolve();
+        
+        // Add recording_url column if it doesn't exist (for existing databases)
+        db.run('ALTER TABLE call_logs ADD COLUMN recording_url TEXT', (err) => {
+          if (err && !err.message.includes('duplicate column name')) {
+            console.error('Error adding recording_url column:', err.message);
+          } else {
+            console.log('Recording URL column ready.');
+          }
+          resolve();
+        });
       });
     });
   });
@@ -131,6 +141,49 @@ const getCallLogs = (limit = 50) => {
   });
 };
 
+const deleteCallLog = (id) => {
+  return new Promise((resolve, reject) => {
+    db.run('DELETE FROM call_logs WHERE id = ?', [id], function(err) {
+      if (err) {
+        reject(err);
+      } else {
+        resolve({ changes: this.changes });
+      }
+    });
+  });
+};
+
+const clearAllCallLogs = () => {
+  return new Promise((resolve, reject) => {
+    db.run('DELETE FROM call_logs', function(err) {
+      if (err) {
+        reject(err);
+      } else {
+        resolve({ changes: this.changes });
+      }
+    });
+  });
+};
+
+const updateCallLogWithRecording = (fromNumber, recordingUrl) => {
+  return new Promise((resolve, reject) => {
+    // SQLite doesn't support ORDER BY in UPDATE, so we need to use a subquery
+    db.run(`UPDATE call_logs SET recording_url = ? 
+            WHERE id = (
+              SELECT id FROM call_logs 
+              WHERE from_number = ? AND status = "Voicemail" 
+              ORDER BY timestamp DESC LIMIT 1
+            )`, 
+      [recordingUrl, fromNumber], function(err) {
+      if (err) {
+        reject(err);
+      } else {
+        resolve({ changes: this.changes });
+      }
+    });
+  });
+};
+
 // Close database connection
 const closeDatabase = () => {
   return new Promise((resolve, reject) => {
@@ -153,5 +206,8 @@ module.exports = {
   deleteContact,
   logCall,
   getCallLogs,
+  deleteCallLog,
+  clearAllCallLogs,
+  updateCallLogWithRecording,
   closeDatabase
 };
