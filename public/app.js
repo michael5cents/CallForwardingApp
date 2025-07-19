@@ -57,8 +57,15 @@ document.addEventListener('DOMContentLoaded', () => {
             
             if (event.data.type === 'FORCE_FOCUS') {
                 console.log('Service worker requesting force focus');
-                if (typeof bringPWAToFocus === 'function') {
-                    bringPWAToFocus();
+                // Simple focus fallback
+                try {
+                    if (typeof bringPWAToFocus === 'function') {
+                        bringPWAToFocus();
+                    } else {
+                        window.focus();
+                    }
+                } catch (error) {
+                    console.log('Focus failed:', error);
                 }
             }
         });
@@ -144,8 +151,17 @@ function initializeSocket() {
         showCallProgress(data);
         addCallStep('📞 Call received', `From: ${formatPhoneNumber(data.from)}`, 'active');
         
-        // Show browser notification
-        showBrowserNotification('Incoming Call', `Call from ${formatPhoneNumber(data.from)}`, 'call');
+        // Show browser notification safely
+        try {
+            if (typeof showBrowserNotification === 'function') {
+                showBrowserNotification('Incoming Call', `Call from ${formatPhoneNumber(data.from)}`, 'call');
+            } else {
+                showToast(`Incoming Call from ${formatPhoneNumber(data.from)}`, 'info');
+            }
+        } catch (error) {
+            console.log('Notification failed:', error);
+            showToast(`Incoming Call from ${formatPhoneNumber(data.from)}`, 'info');
+        }
         
         // Vibrate if supported (Samsung Z Fold 3)
         if ('vibrate' in navigator) {
@@ -166,8 +182,17 @@ function initializeSocket() {
         addCallStep('🤖 AI Gatekeeper engaged', 'Asking caller to state purpose', 'complete');
         addCallStep('🎤 Waiting for response', 'Listening for caller input...', 'active');
         
-        // Show notification for screening
-        showBrowserNotification('Call Screening', `AI screening call from ${formatPhoneNumber(data.from)}`, 'screening');
+        // Show notification for screening safely
+        try {
+            if (typeof showBrowserNotification === 'function') {
+                showBrowserNotification('Call Screening', `AI screening call from ${formatPhoneNumber(data.from)}`, 'screening');
+            } else {
+                showToast(`AI screening call from ${formatPhoneNumber(data.from)}`, 'info');
+            }
+        } catch (error) {
+            console.log('Screening notification failed:', error);
+            showToast(`AI screening call from ${formatPhoneNumber(data.from)}`, 'info');
+        }
     });
     
     socket.on('call-speech-received', (data) => {
