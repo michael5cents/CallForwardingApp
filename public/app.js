@@ -122,11 +122,20 @@ function initializeSocket() {
         }
     });
     
-    // Real-time call events
+    // Real-time call events with enhanced notifications
     socket.on('call-incoming', (data) => {
+        console.log('🔔 INCOMING CALL:', data);
         updateSystemStatus(`Incoming call from ${formatPhoneNumber(data.from)}`, 'incoming');
         showCallProgress(data);
         addCallStep('📞 Call received', `From: ${formatPhoneNumber(data.from)}`, 'active');
+        
+        // Show browser notification
+        showBrowserNotification('Incoming Call', `Call from ${formatPhoneNumber(data.from)}`, 'call');
+        
+        // Vibrate if supported (Samsung Z Fold 3)
+        if ('vibrate' in navigator) {
+            navigator.vibrate([200, 100, 200, 100, 200]);
+        }
     });
     
     socket.on('call-whitelisted', (data) => {
@@ -137,9 +146,13 @@ function initializeSocket() {
     });
     
     socket.on('call-screening', (data) => {
+        console.log('🤖 AI SCREENING:', data);
         updateSystemStatus('AI Screening in progress...', 'screening');
         addCallStep('🤖 AI Gatekeeper engaged', 'Asking caller to state purpose', 'complete');
         addCallStep('🎤 Waiting for response', 'Listening for caller input...', 'active');
+        
+        // Show notification for screening
+        showBrowserNotification('Call Screening', `AI screening call from ${formatPhoneNumber(data.from)}`, 'screening');
     });
     
     socket.on('call-speech-received', (data) => {

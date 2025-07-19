@@ -217,6 +217,7 @@
     </div>
 
     <script src="/socket.io/socket.io.js"></script>
+    <script src="notification-helper.js"></script>
     <script src="app.js"></script>
     
     <!-- PWA Service Worker Registration -->
@@ -322,16 +323,32 @@
                 console.log('Running as PWA');
                 document.body.classList.add('pwa-mode');
                 
-                // Request notification permission for PWA
+                // Request notification permission for PWA immediately
                 if ('Notification' in window && Notification.permission === 'default') {
                     setTimeout(() => {
                         Notification.requestPermission().then((permission) => {
                             console.log('Notification permission:', permission);
                             if (permission === 'granted') {
+                                // Test notification to confirm it's working
+                                new Notification('Call Forwarding Ready', {
+                                    body: 'Real-time call notifications are now enabled!',
+                                    icon: '/icons/icon-192x192.png',
+                                    silent: true,
+                                    tag: 'setup-complete'
+                                });
                                 subscribeToPushNotifications();
                             }
                         });
-                    }, 5000);
+                    }, 2000); // Reduced to 2 seconds for faster setup
+                }
+            } else {
+                // Also request permission for regular browser use
+                if ('Notification' in window && Notification.permission === 'default') {
+                    setTimeout(() => {
+                        Notification.requestPermission().then((permission) => {
+                            console.log('Browser notification permission:', permission);
+                        });
+                    }, 3000);
                 }
             }
         });
