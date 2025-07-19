@@ -49,14 +49,32 @@ const initializeDatabase = () => {
         }
         console.log('Call logs table ready.');
         
-        // Add recording_url column if it doesn't exist (for existing databases)
-        db.run('ALTER TABLE call_logs ADD COLUMN recording_url TEXT', (err) => {
-          if (err && !err.message.includes('duplicate column name')) {
-            console.error('Error adding recording_url column:', err.message);
-          } else {
-            console.log('Recording URL column ready.');
+        // Create blacklist table
+        db.run(`
+          CREATE TABLE IF NOT EXISTS blacklist (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            phone_number TEXT NOT NULL UNIQUE,
+            reason TEXT,
+            date_added DATETIME DEFAULT CURRENT_TIMESTAMP,
+            pattern_type TEXT DEFAULT 'exact'
+          )
+        `, (err) => {
+          if (err) {
+            console.error('Error creating blacklist table:', err.message);
+            reject(err);
+            return;
           }
-          resolve();
+          console.log('Blacklist table ready.');
+          
+          // Add recording_url column if it doesn't exist (for existing databases)
+          db.run('ALTER TABLE call_logs ADD COLUMN recording_url TEXT', (err) => {
+            if (err && !err.message.includes('duplicate column name')) {
+              console.error('Error adding recording_url column:', err.message);
+            } else {
+              console.log('Recording URL column ready.');
+            }
+            resolve();
+          });
         });
       });
     });
@@ -78,13 +96,33 @@ const addContact = (name, phoneNumber) => {
   });
 };
 
+// Helper function to normalize phone numbers for comparison
+const normalizePhoneNumber = (phoneNumber) => {
+  if (!phoneNumber) return '';
+  // Remove all non-digit characters and ensure it starts with +1 for US numbers
+  const digits = phoneNumber.replace(/\D/g, '');
+  if (digits.length === 10) {
+    return `+1${digits}`;
+  } else if (digits.length === 11 && digits.startsWith('1')) {
+    return `+${digits}`;
+  }
+  return `+${digits}`;
+};
+
 const getContactByPhoneNumber = (phoneNumber) => {
   return new Promise((resolve, reject) => {
-    db.get('SELECT * FROM contacts WHERE phone_number = ?', [phoneNumber], (err, row) => {
+    const normalizedIncoming = normalizePhoneNumber(phoneNumber);
+    
+    // Get all contacts and check normalized versions
+    db.all('SELECT * FROM contacts', (err, rows) => {
       if (err) {
         reject(err);
       } else {
-        resolve(row);
+        const match = rows.find(contact => {
+          const normalizedStored = normalizePhoneNumber(contact.phone_number);
+          return normalizedStored === normalizedIncoming;
+        });
+        resolve(match || null);
       }
     });
   });
@@ -184,6 +222,90 @@ const updateCallLogWithRecording = (fromNumber, recordingUrl) => {
   });
 };
 
+// Blacklist management functions
+const addToBlacklist = (phoneNumber, reason = 'Unwanted caller', patternType = 'exact') => {
+  return new Promise((resolve, reject) => {
+    const normalizedNumber = normalizePhoneNumber(phoneNumber);
+    const stmt = db.prepare('INSERT INTO blacklist (phone_number, reason, pattern_type) VALUES (?, ?, ?)');
+    stmt.run([normalizedNumber, reason, patternType], function(err) {
+      if (err) {
+        reject(err);
+      } else {
+        resolve({ id: this.lastID, phone_number: normalizedNumber, reason, pattern_type: patternType });
+      }
+    });
+    stmt.finalize();
+  });
+};
+
+const getBlacklistByPhoneNumber = (phoneNumber) => {
+  return new Promise((resolve, reject) => {
+    const normalizedIncoming = normalizePhoneNumber(phoneNumber);
+    
+    // Get all blacklist entries and check for matches
+    db.all('SELECT * FROM blacklist', (err, rows) => {
+      if (err) {
+        reject(err);
+      } else {
+        const match = rows.find(entry => {
+          if (entry.pattern_type === 'exact') {
+            const normalizedStored = normalizePhoneNumber(entry.phone_number);
+            return normalizedStored === normalizedIncoming;
+          } else if (entry.pattern_type === 'area_code') {
+            // Match area code (first 3 digits after country code)
+            const incomingAreaCode = normalizedIncoming.substring(2, 5);
+            const storedAreaCode = entry.phone_number.replace(/\D/g, '');
+            return storedAreaCode === incomingAreaCode;
+          } else if (entry.pattern_type === 'prefix') {
+            // Match number prefix
+            const cleanStored = entry.phone_number.replace(/\D/g, '');
+            const cleanIncoming = normalizedIncoming.replace(/\D/g, '');
+            return cleanIncoming.startsWith(cleanStored);
+          }
+          return false;
+        });
+        resolve(match || null);
+      }
+    });
+  });
+};
+
+const getAllBlacklistEntries = () => {
+  return new Promise((resolve, reject) => {
+    db.all('SELECT * FROM blacklist ORDER BY date_added DESC', (err, rows) => {
+      if (err) {
+        reject(err);
+      } else {
+        resolve(rows);
+      }
+    });
+  });
+};
+
+const removeFromBlacklist = (id) => {
+  return new Promise((resolve, reject) => {
+    db.run('DELETE FROM blacklist WHERE id = ?', [id], function(err) {
+      if (err) {
+        reject(err);
+      } else {
+        resolve({ changes: this.changes });
+      }
+    });
+  });
+};
+
+const clearAllBlacklist = () => {
+  return new Promise((resolve, reject) => {
+    db.run('DELETE FROM blacklist', function(err) {
+      if (err) {
+        reject(err);
+      } else {
+        resolve({ changes: this.changes });
+      }
+    });
+  });
+};
+
 // Close database connection
 const closeDatabase = () => {
   return new Promise((resolve, reject) => {
@@ -209,5 +331,10 @@ module.exports = {
   deleteCallLog,
   clearAllCallLogs,
   updateCallLogWithRecording,
+  addToBlacklist,
+  getBlacklistByPhoneNumber,
+  getAllBlacklistEntries,
+  removeFromBlacklist,
+  clearAllBlacklist,
   closeDatabase
 };

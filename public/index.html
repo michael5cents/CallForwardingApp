@@ -2,8 +2,44 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no, viewport-fit=cover">
     <title>Call Forwarding Dashboard</title>
+    
+    <!-- PWA Meta Tags -->
+    <meta name="application-name" content="Call Forwarding Dashboard">
+    <meta name="description" content="Personal Call Forwarding App with AI Gatekeeper - Real-time call monitoring and management">
+    <meta name="theme-color" content="#2563eb">
+    <meta name="mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    <meta name="apple-mobile-web-app-title" content="CallForwarding">
+    <meta name="msapplication-TileColor" content="#2563eb">
+    <meta name="msapplication-tap-highlight" content="no">
+    
+    <!-- Samsung-specific meta tags -->
+    <meta name="samsung-fullscreen" content="yes">
+    <meta name="mobile-web-app-capable" content="yes">
+    <meta name="theme-color" media="(prefers-color-scheme: light)" content="#2563eb">
+    <meta name="theme-color" media="(prefers-color-scheme: dark)" content="#1e293b">
+    
+    <!-- Manifest -->
+    <link rel="manifest" href="/manifest.json">
+    
+    <!-- Icon links for various devices -->
+    <link rel="icon" type="image/png" sizes="32x32" href="/icons/icon-32x32.png">
+    <link rel="icon" type="image/png" sizes="16x16" href="/icons/icon-16x16.png">
+    <link rel="apple-touch-icon" href="/icons/icon-192x192.png">
+    <link rel="apple-touch-icon" sizes="152x152" href="/icons/icon-152x152.png">
+    <link rel="apple-touch-icon" sizes="180x180" href="/icons/icon-180x180.png">
+    <link rel="mask-icon" href="/icons/safari-pinned-tab.svg" color="#2563eb">
+    
+    <!-- Windows specific -->
+    <meta name="msapplication-config" content="/browserconfig.xml">
+    
+    <!-- Preload critical resources -->
+    <link rel="preload" href="/socket.io/socket.io.js" as="script">
+    <link rel="preload" href="app.js" as="script">
+    
     <link rel="stylesheet" href="styles.css">
 </head>
 <body>
@@ -55,6 +91,53 @@
                 </div>
             </section>
 
+            <!-- Blacklist Management Section -->
+            <section class="section">
+                <h2>🚫 Blacklist Management</h2>
+                
+                <div class="add-blacklist-form">
+                    <h3>Add to Blacklist</h3>
+                    <form id="blacklistForm">
+                        <div class="form-group">
+                            <label for="blacklistPhone">Phone Number:</label>
+                            <input type="tel" id="blacklistPhone" placeholder="+1234567890" required>
+                        </div>
+                        <div class="form-group">
+                            <label for="blacklistReason">Reason:</label>
+                            <select id="blacklistReason" required>
+                                <option value="">Select reason...</option>
+                                <option value="Spam/Robocall">Spam/Robocall</option>
+                                <option value="Telemarketing">Telemarketing</option>
+                                <option value="Bill Collector">Bill Collector</option>
+                                <option value="Harassment">Harassment</option>
+                                <option value="Scam">Scam</option>
+                                <option value="Other">Other</option>
+                            </select>
+                        </div>
+                        <div class="form-group">
+                            <label for="patternType">Block Type:</label>
+                            <select id="patternType">
+                                <option value="exact">Exact Number</option>
+                                <option value="area_code">Entire Area Code</option>
+                                <option value="prefix">Number Prefix</option>
+                            </select>
+                        </div>
+                        <button type="submit" class="btn btn-danger">Add to Blacklist</button>
+                    </form>
+                </div>
+
+                <div class="blacklist-list">
+                    <h3>Blacklisted Numbers</h3>
+                    <div class="blacklist-controls">
+                        <button id="refreshBlacklist" class="btn btn-secondary">Refresh</button>
+                        <button onclick="clearAllBlacklist()" class="btn btn-danger">Clear All</button>
+                    </div>
+                    <div id="blacklistEntries" class="blacklist-container">
+                        <!-- Blacklist entries will be loaded here -->
+                    </div>
+                </div>
+            </section>
+
             <!-- Call Logs Section -->
             <section class="section">
                 <h2>📋 Recent Call Logs</h2>
@@ -101,7 +184,271 @@
     <!-- Toast Notifications -->
     <div id="toastContainer" class="toast-container"></div>
 
+    <!-- PWA Install Prompt -->
+    <div id="pwaInstallPrompt" class="pwa-install-prompt hidden">
+        <div class="pwa-install-content">
+            <div class="pwa-install-header">
+                <h3>📱 Install Call Forwarding App</h3>
+                <button class="pwa-install-close" onclick="closePWAPrompt()">&times;</button>
+            </div>
+            <p>Install this app on your Samsung Galaxy Z Fold 3 for:</p>
+            <ul>
+                <li>🔔 Real-time call notifications (even when closed)</li>
+                <li>🚀 Faster loading and offline access</li>
+                <li>📱 Full-screen experience optimized for foldable</li>
+                <li>🔋 Better battery efficiency</li>
+            </ul>
+            <div class="pwa-install-actions">
+                <button id="pwaInstallButton" class="btn btn-primary">Install App</button>
+                <button onclick="closePWAPrompt()" class="btn btn-secondary">Not Now</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- PWA Update Available Banner -->
+    <div id="pwaUpdateBanner" class="pwa-update-banner hidden">
+        <div class="pwa-update-content">
+            <span>📥 App update available!</span>
+            <div class="pwa-update-actions">
+                <button id="pwaUpdateButton" class="btn btn-primary btn-small">Update</button>
+                <button onclick="closePWAUpdate()" class="btn btn-secondary btn-small">Later</button>
+            </div>
+        </div>
+    </div>
+
     <script src="/socket.io/socket.io.js"></script>
     <script src="app.js"></script>
+    
+    <!-- PWA Service Worker Registration -->
+    <script>
+        // Service Worker Registration and PWA functionality
+        let deferredPrompt;
+        let swRegistration = null;
+
+        // Register service worker
+        if ('serviceWorker' in navigator) {
+            window.addEventListener('load', () => {
+                navigator.serviceWorker.register('/sw.js')
+                    .then((registration) => {
+                        console.log('SW registered: ', registration);
+                        swRegistration = registration;
+                        
+                        // Check for updates
+                        registration.addEventListener('updatefound', () => {
+                            const newWorker = registration.installing;
+                            newWorker.addEventListener('statechange', () => {
+                                if (newWorker.state === 'installed' && navigator.serviceWorker.controller) {
+                                    showUpdateBanner();
+                                }
+                            });
+                        });
+                    })
+                    .catch((registrationError) => {
+                        console.log('SW registration failed: ', registrationError);
+                    });
+            });
+
+            // Listen for messages from service worker
+            navigator.serviceWorker.addEventListener('message', (event) => {
+                if (event.data.type === 'CALL_LOGS_UPDATED') {
+                    // Update call logs from background sync
+                    callLogs = event.data.data;
+                    renderCallLogs();
+                    updateStats();
+                }
+            });
+        }
+
+        // PWA Install Prompt
+        window.addEventListener('beforeinstallprompt', (e) => {
+            console.log('beforeinstallprompt event fired');
+            e.preventDefault();
+            deferredPrompt = e;
+            
+            // Show install prompt immediately for testing
+            setTimeout(() => {
+                if (!window.matchMedia('(display-mode: standalone)').matches) {
+                    showPWAPrompt();
+                    console.log('Showing PWA install prompt');
+                }
+            }, 3000); // Reduced to 3 seconds for testing
+        });
+
+        // Manual install trigger for testing
+        window.addEventListener('load', () => {
+            // Add manual install button to header for testing
+            const header = document.querySelector('header');
+            const installBtn = document.createElement('button');
+            installBtn.textContent = '📱 Install as App';
+            installBtn.className = 'btn btn-primary';
+            installBtn.style.margin = '10px';
+            installBtn.onclick = () => {
+                if (deferredPrompt) {
+                    deferredPrompt.prompt();
+                    deferredPrompt.userChoice.then((choiceResult) => {
+                        console.log('User choice:', choiceResult.outcome);
+                        deferredPrompt = null;
+                    });
+                } else {
+                    // Fallback: show manual install instructions
+                    showManualInstallInstructions();
+                }
+            };
+            header.appendChild(installBtn);
+        });
+
+        // Handle PWA installation
+        document.getElementById('pwaInstallButton').addEventListener('click', async () => {
+            if (deferredPrompt) {
+                deferredPrompt.prompt();
+                const { outcome } = await deferredPrompt.userChoice;
+                console.log(`PWA install outcome: ${outcome}`);
+                deferredPrompt = null;
+                closePWAPrompt();
+            }
+        });
+
+        // Handle PWA update
+        document.getElementById('pwaUpdateButton').addEventListener('click', () => {
+            if (swRegistration && swRegistration.waiting) {
+                swRegistration.waiting.postMessage({ type: 'SKIP_WAITING' });
+                window.location.reload();
+            }
+        });
+
+        // Check if running as PWA
+        window.addEventListener('DOMContentLoaded', () => {
+            if (window.matchMedia('(display-mode: standalone)').matches) {
+                console.log('Running as PWA');
+                document.body.classList.add('pwa-mode');
+                
+                // Request notification permission for PWA
+                if ('Notification' in window && Notification.permission === 'default') {
+                    setTimeout(() => {
+                        Notification.requestPermission().then((permission) => {
+                            console.log('Notification permission:', permission);
+                            if (permission === 'granted') {
+                                subscribeToPushNotifications();
+                            }
+                        });
+                    }, 5000);
+                }
+            }
+        });
+
+        // PWA UI functions
+        function showPWAPrompt() {
+            document.getElementById('pwaInstallPrompt').classList.remove('hidden');
+        }
+
+        function closePWAPrompt() {
+            document.getElementById('pwaInstallPrompt').classList.add('hidden');
+            localStorage.setItem('pwa-prompt-dismissed', Date.now());
+        }
+
+        function showUpdateBanner() {
+            document.getElementById('pwaUpdateBanner').classList.remove('hidden');
+        }
+
+        function closePWAUpdate() {
+            document.getElementById('pwaUpdateBanner').classList.add('hidden');
+        }
+
+        function showManualInstallInstructions() {
+            const isAndroid = /Android/i.test(navigator.userAgent);
+            const isChrome = /Chrome/i.test(navigator.userAgent);
+            const isSamsung = /Samsung/i.test(navigator.userAgent);
+            
+            let instructions = '';
+            
+            if (isSamsung || isAndroid) {
+                instructions = `
+                    <h3>📱 Install on Samsung/Android</h3>
+                    <ol style="text-align: left; margin: 20px 0;">
+                        <li>Open Samsung Internet or Chrome browser</li>
+                        <li>Tap the menu button (⋮) in the browser</li>
+                        <li>Look for "Add to Home screen" or "Install app"</li>
+                        <li>Tap "Add" or "Install" to confirm</li>
+                        <li>The app will appear on your home screen</li>
+                    </ol>
+                    <p><strong>Note:</strong> You may need to enable "Install unknown apps" in Settings > Apps</p>
+                `;
+            } else {
+                instructions = `
+                    <h3>📱 Install Instructions</h3>
+                    <p>To install this app, use a supported browser like Chrome, Samsung Internet, or Edge and look for the install prompt in the address bar.</p>
+                `;
+            }
+            
+            const modal = document.createElement('div');
+            modal.className = 'pwa-install-prompt';
+            modal.innerHTML = `
+                <div class="pwa-install-content">
+                    <div class="pwa-install-header">
+                        <h3>📱 Install Call Forwarding App</h3>
+                        <button class="pwa-install-close" onclick="this.closest('.pwa-install-prompt').remove()">&times;</button>
+                    </div>
+                    ${instructions}
+                    <div class="pwa-install-actions">
+                        <button onclick="this.closest('.pwa-install-prompt').remove()" class="btn btn-secondary">Close</button>
+                    </div>
+                </div>
+            `;
+            
+            document.body.appendChild(modal);
+            
+            // Close modal when clicking outside
+            modal.addEventListener('click', (e) => {
+                if (e.target === modal) {
+                    modal.remove();
+                }
+            });
+        }
+
+        // Push notification subscription (placeholder for Firebase implementation)
+        async function subscribeToPushNotifications() {
+            if (swRegistration && 'pushManager' in swRegistration) {
+                try {
+                    // This will be implemented with Firebase Cloud Messaging
+                    console.log('Push notification subscription ready');
+                } catch (error) {
+                    console.error('Push subscription failed:', error);
+                }
+            }
+        }
+
+        // Background sync registration
+        function registerBackgroundSync() {
+            if (swRegistration && 'sync' in swRegistration) {
+                swRegistration.sync.register('sync-call-logs');
+            }
+        }
+
+        // Trigger background sync when app becomes visible
+        document.addEventListener('visibilitychange', () => {
+            if (!document.hidden) {
+                registerBackgroundSync();
+            }
+        });
+
+        // Samsung-specific optimizations
+        if (navigator.userAgent.includes('Samsung')) {
+            console.log('Samsung device detected - enabling optimizations');
+            
+            // Add Samsung-specific CSS class
+            document.body.classList.add('samsung-device');
+            
+            // Handle foldable screen changes
+            if ('screen' in window && 'orientation' in screen) {
+                screen.orientation.addEventListener('change', () => {
+                    console.log('Screen orientation changed:', screen.orientation.angle);
+                    // Trigger layout adjustments for Z Fold 3
+                    setTimeout(() => {
+                        window.dispatchEvent(new Event('resize'));
+                    }, 100);
+                });
+            }
+        }
+    </script>
 </body>
 </html>

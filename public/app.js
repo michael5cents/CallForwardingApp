@@ -1,6 +1,7 @@
 // Global state
 let contacts = [];
 let callLogs = [];
+let blacklistEntries = [];
 let socket;
 
 // DOM Elements
@@ -10,6 +11,11 @@ const callLogsList = document.getElementById('callLogs');
 const refreshLogsBtn = document.getElementById('refreshLogs');
 const loadingOverlay = document.getElementById('loadingOverlay');
 const toastContainer = document.getElementById('toastContainer');
+
+// Blacklist DOM elements
+const blacklistForm = document.getElementById('blacklistForm');
+const blacklistEntriesList = document.getElementById('blacklistEntries');
+const refreshBlacklistBtn = document.getElementById('refreshBlacklist');
 
 // Live call status elements
 const statusIndicator = document.getElementById('statusIndicator');
@@ -27,27 +33,90 @@ document.addEventListener('DOMContentLoaded', () => {
     initializeSocket();
     loadContacts();
     loadCallLogs();
+    loadBlacklist();
     
     // Event listeners
     contactForm.addEventListener('submit', handleAddContact);
     refreshLogsBtn.addEventListener('click', loadCallLogs);
+    blacklistForm.addEventListener('submit', handleAddToBlacklist);
+    refreshBlacklistBtn.addEventListener('click', loadBlacklist);
     
-    // Auto-refresh call logs every 30 seconds
-    setInterval(loadCallLogs, 30000);
+    // Auto-refresh call logs and blacklist every 30 seconds
+    setInterval(() => {
+        loadCallLogs();
+        loadBlacklist();
+    }, 30000);
 });
 
-// Socket.io initialization and event handlers
+// Socket.io initialization and event handlers with PWA enhancements
 function initializeSocket() {
-    socket = io();
+    // Enhanced Socket.IO configuration for mobile PWA
+    socket = io({
+        transports: ['websocket', 'polling'], // Fallback to polling for mobile
+        upgrade: true,
+        rememberUpgrade: true,
+        forceNew: false,
+        reconnection: true,
+        reconnectionDelay: 1000,
+        reconnectionDelayMax: 5000,
+        maxReconnectionAttempts: 10,
+        timeout: 20000,
+        autoConnect: true,
+        pingTimeout: 60000,
+        pingInterval: 25000
+    });
     
     socket.on('connect', () => {
         console.log('Connected to server');
         updateSystemStatus('Connected', 'ready');
+        
+        // Request missed updates when reconnecting
+        socket.emit('request-sync', {
+            timestamp: localStorage.getItem('last-sync') || 0
+        });
+        
+        // Update last connection time
+        localStorage.setItem('last-connection', Date.now());
     });
     
-    socket.on('disconnect', () => {
-        console.log('Disconnected from server');
+    socket.on('disconnect', (reason) => {
+        console.log('Disconnected from server:', reason);
         updateSystemStatus('Disconnected', 'error');
+        
+        // Try to maintain connection for PWA
+        if (reason === 'io server disconnect') {
+            // Server disconnected, try manual reconnect
+            setTimeout(() => {
+                socket.connect();
+            }, 1000);
+        }
+    });
+    
+    socket.on('reconnect', (attemptNumber) => {
+        console.log('Reconnected after', attemptNumber, 'attempts');
+        updateSystemStatus('Reconnected', 'ready');
+        showToast('Connection restored!', 'success');
+    });
+    
+    socket.on('reconnect_attempt', (attemptNumber) => {
+        console.log('Reconnection attempt', attemptNumber);
+        updateSystemStatus(`Reconnecting... (${attemptNumber})`, 'connecting');
+    });
+    
+    socket.on('reconnect_error', (error) => {
+        console.error('Reconnection failed:', error);
+        updateSystemStatus('Reconnection failed', 'error');
+    });
+    
+    socket.on('connect_error', (error) => {
+        console.error('Connection error:', error);
+        updateSystemStatus('Connection error', 'error');
+        
+        // Fallback to HTTP polling if WebSocket fails
+        if (socket.io.engine && socket.io.engine.transport.name === 'websocket') {
+            console.log('Falling back to HTTP polling');
+            socket.io.opts.transports = ['polling'];
+        }
     });
     
     // Real-time call events
@@ -59,9 +128,9 @@ function initializeSocket() {
     
     socket.on('call-whitelisted', (data) => {
         updateSystemStatus(`Whitelisted: ${data.contactName}`, 'forwarding');
-        addCallStep('✅ Contact recognized', `Forwarding to ${data.contactName}`, 'complete');
-        addCallStep('📞 Forwarding call', 'Direct connection established', 'active');
-        setTimeout(() => clearCallProgress(), 5000);
+        addCallStep('✅ Contact recognized', `${data.contactName} is whitelisted`, 'complete');
+        addCallStep('📞 Forwarding call', 'Ringing your phone with whisper message', 'active');
+        addCallStep('🔔 Awaiting acceptance', 'Press any key on your phone to accept', 'active');
     });
     
     socket.on('call-screening', (data) => {
@@ -100,8 +169,8 @@ function initializeSocket() {
     
     socket.on('call-forwarding', (data) => {
         updateSystemStatus(`Forwarding ${data.category} call`, 'forwarding');
-        addCallStep('📞 Forwarding call', `Connecting to ${formatPhoneNumber(data.forwardTo)}`, 'active');
-        setTimeout(() => clearCallProgress(), 8000);
+        addCallStep('📞 Forwarding call', 'Ringing your phone with AI summary', 'active');
+        addCallStep('🔔 Awaiting acceptance', 'Press any key on your phone to accept', 'active');
     });
     
     socket.on('call-voicemail', (data) => {
@@ -137,6 +206,26 @@ function initializeSocket() {
         setTimeout(() => clearCallProgress(), 5000);
     });
     
+    // New events for call acceptance workflow
+    socket.on('call-accepted', (data) => {
+        updateSystemStatus('Call accepted', 'ready');
+        addCallStep('✅ Call accepted', 'Call connected successfully', 'complete');
+        setTimeout(() => clearCallProgress(), 3000);
+    });
+    
+    socket.on('call-not-accepted', (data) => {
+        updateSystemStatus('Call not accepted', 'rejected');
+        addCallStep('❌ Call declined', 'Recipient did not accept the call', 'complete');
+        setTimeout(() => clearCallProgress(), 5000);
+    });
+    
+    socket.on('dial-completed', (data) => {
+        updateSystemStatus(`Call ended (${data.status})`, 'ready');
+        const statusMessage = data.duration ? `Duration: ${data.duration} seconds` : 'Call ended';
+        addCallStep('📞 Call completed', statusMessage, 'complete');
+        setTimeout(() => clearCallProgress(), 5000);
+    });
+    
     // Contact management events
     socket.on('contact-added', (contact) => {
         contacts.push(contact);
@@ -165,6 +254,44 @@ function initializeSocket() {
         renderCallLogs();
         updateStats();
         showToast('All call logs cleared!');
+    });
+    
+    // Blacklist management events
+    socket.on('blacklist-added', (entry) => {
+        blacklistEntries.push(entry);
+        renderBlacklist();
+        showToast(`Number ${entry.phone_number} added to blacklist!`);
+    });
+    
+    socket.on('blacklist-removed', (data) => {
+        blacklistEntries = blacklistEntries.filter(entry => entry.id !== data.id);
+        renderBlacklist();
+        showToast('Number removed from blacklist successfully!');
+    });
+    
+    socket.on('blacklist-cleared', () => {
+        blacklistEntries = [];
+        renderBlacklist();
+        showToast('All blacklist entries cleared!');
+    });
+    
+    // Blacklist call events
+    socket.on('call-blacklisted', (data) => {
+        updateSystemStatus(`Blacklisted caller: ${formatPhoneNumber(data.from)}`, 'rejected');
+        addCallStep('🚫 Blacklisted caller', `TCPA compliance message sent - ${data.reason}`, 'complete');
+        setTimeout(() => clearCallProgress(), 5000);
+    });
+    
+    socket.on('tcpa-removal-requested', (data) => {
+        updateSystemStatus('TCPA removal requested', 'ready');
+        addCallStep('📋 Removal requested', 'Caller requested Do Not Call removal', 'complete');
+        setTimeout(() => clearCallProgress(), 5000);
+    });
+    
+    socket.on('tcpa-no-response', (data) => {
+        updateSystemStatus('TCPA no response', 'rejected');
+        addCallStep('❌ No TCPA response', 'Call terminated', 'complete');
+        setTimeout(() => clearCallProgress(), 5000);
     });
 }
 
@@ -591,3 +718,335 @@ function closeAudioModal() {
         modal.remove();
     }
 }
+
+// Blacklist Management Functions
+
+// Load blacklist entries
+async function loadBlacklist() {
+    try {
+        const newEntries = await apiRequest('/api/blacklist');
+        
+        // Flash update if new entries
+        if (newEntries.length > blacklistEntries.length) {
+            blacklistEntriesList.classList.add('flash-update');
+            setTimeout(() => blacklistEntriesList.classList.remove('flash-update'), 500);
+        }
+        
+        blacklistEntries = newEntries;
+        renderBlacklist();
+    } catch (error) {
+        console.error('Failed to load blacklist:', error);
+    }
+}
+
+// Handle adding to blacklist
+async function handleAddToBlacklist(e) {
+    e.preventDefault();
+    
+    const phone = document.getElementById('blacklistPhone').value.trim();
+    const reason = document.getElementById('blacklistReason').value;
+    const patternType = document.getElementById('patternType').value;
+    
+    if (!phone || !reason) {
+        showToast('Please fill in phone number and reason', 'error');
+        return;
+    }
+    
+    try {
+        await apiRequest('/api/blacklist', {
+            method: 'POST',
+            body: JSON.stringify({
+                phone_number: phone,
+                reason: reason,
+                pattern_type: patternType
+            })
+        });
+        
+        blacklistForm.reset();
+        // Entry will be added via socket event
+    } catch (error) {
+        if (error.message.includes('409')) {
+            showToast('This phone number is already blacklisted', 'error');
+        } else {
+            showToast('Failed to add to blacklist', 'error');
+        }
+    }
+}
+
+// Delete blacklist entry
+async function deleteBlacklistEntry(id) {
+    if (!confirm('Are you sure you want to remove this number from the blacklist?')) {
+        return;
+    }
+    
+    try {
+        await apiRequest(`/api/blacklist/${id}`, {
+            method: 'DELETE'
+        });
+        // Entry will be removed via socket event
+    } catch (error) {
+        showToast('Failed to remove from blacklist', 'error');
+    }
+}
+
+// Clear all blacklist entries
+async function clearAllBlacklist() {
+    if (!confirm('Are you sure you want to clear ALL blacklist entries? This cannot be undone.')) {
+        return;
+    }
+    
+    try {
+        await apiRequest('/api/blacklist', {
+            method: 'DELETE'
+        });
+        // Entries will be cleared via socket event
+    } catch (error) {
+        showToast('Failed to clear blacklist', 'error');
+    }
+}
+
+// Render blacklist entries
+function renderBlacklist() {
+    if (blacklistEntries.length === 0) {
+        blacklistEntriesList.innerHTML = `
+            <div class="empty-state">
+                <h3>No blacklisted numbers</h3>
+                <p>Add numbers to automatically send TCPA compliance messages</p>
+            </div>
+        `;
+        return;
+    }
+    
+    blacklistEntriesList.innerHTML = blacklistEntries.map(entry => `
+        <div class="blacklist-item">
+            <div class="blacklist-info">
+                <h4>${formatPhoneNumber(entry.phone_number)}</h4>
+                <p><strong>Reason:</strong> ${escapeHtml(entry.reason)}</p>
+                <p><strong>Type:</strong> ${entry.pattern_type.replace('_', ' ')}</p>
+                <p><strong>Added:</strong> ${formatTimestamp(entry.date_added)}</p>
+            </div>
+            <button class="btn btn-danger" onclick="deleteBlacklistEntry(${entry.id})">
+                Remove
+            </button>
+        </div>
+    `).join('');
+}
+
+// Add phone number formatting for blacklist input
+document.getElementById('blacklistPhone').addEventListener('input', function(e) {
+    let value = e.target.value.replace(/\D/g, '');
+    
+    // Limit to 11 digits (1 + 10 digit US number)
+    if (value.length > 11) {
+        value = value.substring(0, 11);
+    }
+    
+    // Format as +1 (XXX) XXX-XXXX
+    if (value.length >= 1) {
+        if (value.length <= 1) {
+            value = '+' + value;
+        } else if (value.length <= 4) {
+            value = '+' + value.substring(0, 1) + ' (' + value.substring(1);
+        } else if (value.length <= 7) {
+            value = '+' + value.substring(0, 1) + ' (' + value.substring(1, 4) + ') ' + value.substring(4);
+        } else {
+            value = '+' + value.substring(0, 1) + ' (' + value.substring(1, 4) + ') ' + value.substring(4, 7) + '-' + value.substring(7);
+        }
+    }
+    
+    e.target.value = value;
+});
+
+// PWA-specific enhancements and background connectivity
+
+// Page Visibility API for PWA background handling
+document.addEventListener('visibilitychange', () => {
+    if (!document.hidden) {
+        console.log('App became visible - syncing data');
+        
+        // Refresh data when app becomes visible
+        loadContacts();
+        loadCallLogs();
+        loadBlacklist();
+        
+        // Reconnect socket if needed
+        if (socket && !socket.connected) {
+            console.log('Attempting to reconnect socket...');
+            socket.connect();
+        }
+        
+        // Update last sync timestamp
+        localStorage.setItem('last-sync', Date.now());
+    } else {
+        console.log('App went to background');
+        
+        // Store current state for when app returns
+        localStorage.setItem('last-background', Date.now());
+    }
+});
+
+// Network status monitoring for PWA
+window.addEventListener('online', () => {
+    console.log('Network connection restored');
+    showToast('Back online! Syncing data...', 'success');
+    
+    // Reconnect and sync when coming back online
+    if (socket && !socket.connected) {
+        socket.connect();
+    }
+    
+    // Refresh all data
+    setTimeout(() => {
+        loadContacts();
+        loadCallLogs();
+        loadBlacklist();
+    }, 1000);
+});
+
+window.addEventListener('offline', () => {
+    console.log('Network connection lost');
+    updateSystemStatus('Offline', 'error');
+    showToast('Connection lost - working offline', 'warning');
+});
+
+// Battery status monitoring for Samsung devices
+if ('getBattery' in navigator) {
+    navigator.getBattery().then((battery) => {
+        console.log('Battery level:', Math.round(battery.level * 100) + '%');
+        
+        // Adjust polling frequency based on battery level
+        battery.addEventListener('levelchange', () => {
+            const batteryLevel = battery.level;
+            console.log('Battery level changed:', Math.round(batteryLevel * 100) + '%');
+            
+            if (batteryLevel < 0.2) {
+                // Reduce background activity when battery is low
+                console.log('Low battery - reducing background activity');
+                socket.io.opts.pingInterval = 60000; // Increase ping interval
+            } else {
+                socket.io.opts.pingInterval = 25000; // Normal ping interval
+            }
+        });
+        
+        battery.addEventListener('chargingchange', () => {
+            console.log('Charging status changed:', battery.charging);
+            if (battery.charging) {
+                // Resume normal activity when charging
+                socket.io.opts.pingInterval = 25000;
+            }
+        });
+    });
+}
+
+// Background sync for PWA data updates
+function requestBackgroundSync() {
+    if ('serviceWorker' in navigator && 'sync' in window.ServiceWorkerRegistration.prototype) {
+        navigator.serviceWorker.ready.then((registration) => {
+            registration.sync.register('sync-call-logs');
+            registration.sync.register('sync-contacts');
+            registration.sync.register('sync-blacklist');
+        }).catch((error) => {
+            console.error('Background sync registration failed:', error);
+        });
+    }
+}
+
+// Enhanced notification support for critical call events
+function showCallNotification(title, body, data = {}) {
+    if ('Notification' in window && Notification.permission === 'granted') {
+        const notification = new Notification(title, {
+            body: body,
+            icon: '/icons/icon-192x192.png',
+            badge: '/icons/badge-72x72.png',
+            tag: 'call-alert',
+            requireInteraction: true,
+            vibrate: [200, 100, 200, 100, 200],
+            data: data,
+            actions: [
+                {
+                    action: 'view',
+                    title: 'View Details'
+                },
+                {
+                    action: 'dismiss',
+                    title: 'Dismiss'
+                }
+            ]
+        });
+        
+        notification.onclick = function() {
+            window.focus();
+            this.close();
+        };
+        
+        // Auto-close after 30 seconds
+        setTimeout(() => {
+            notification.close();
+        }, 30000);
+        
+        return notification;
+    }
+}
+
+// PWA-specific data persistence
+function saveDataToCache(key, data) {
+    try {
+        localStorage.setItem(`pwa-cache-${key}`, JSON.stringify({
+            data: data,
+            timestamp: Date.now()
+        }));
+    } catch (error) {
+        console.error('Failed to save data to cache:', error);
+    }
+}
+
+function loadDataFromCache(key, maxAge = 300000) { // 5 minutes default
+    try {
+        const cached = localStorage.getItem(`pwa-cache-${key}`);
+        if (cached) {
+            const parsed = JSON.parse(cached);
+            if (Date.now() - parsed.timestamp < maxAge) {
+                return parsed.data;
+            }
+        }
+    } catch (error) {
+        console.error('Failed to load data from cache:', error);
+    }
+    return null;
+}
+
+// Samsung Z Fold 3 specific optimizations
+if (navigator.userAgent.includes('SM-F926') || window.screen.width > 1768) {
+    console.log('Samsung Galaxy Z Fold 3 detected - applying optimizations');
+    
+    // Add foldable-specific CSS class
+    document.body.classList.add('galaxy-fold');
+    
+    // Handle screen configuration changes
+    const mediaQuery = window.matchMedia('(min-width: 1768px)');
+    
+    function handleScreenChange(mq) {
+        if (mq.matches) {
+            console.log('Unfolded mode detected');
+            document.body.classList.add('unfolded');
+            document.body.classList.remove('folded');
+        } else {
+            console.log('Folded mode detected');
+            document.body.classList.add('folded');
+            document.body.classList.remove('unfolded');
+        }
+        
+        // Trigger layout refresh
+        setTimeout(() => {
+            window.dispatchEvent(new Event('resize'));
+        }, 100);
+    }
+    
+    mediaQuery.addListener(handleScreenChange);
+    handleScreenChange(mediaQuery); // Initial check
+}
+
+// Initialize PWA background sync on app start
+setTimeout(() => {
+    requestBackgroundSync();
+}, 2000);

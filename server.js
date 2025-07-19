@@ -52,6 +52,32 @@ app.post('/voice', async (req, res) => {
       status: 'incoming'
     });
     
+    // First check if caller is blacklisted
+    const blacklistEntry = await database.getBlacklistByPhoneNumber(fromNumber);
+    
+    if (blacklistEntry) {
+      // Path C: Blacklisted caller - send TCPA compliance message
+      console.log(`Blacklisted caller detected: ${fromNumber}, reason: ${blacklistEntry.reason}`);
+      
+      // Emit blacklisted event
+      io.emit('call-blacklisted', {
+        from: fromNumber,
+        callSid: callSid,
+        reason: blacklistEntry.reason,
+        timestamp: new Date().toISOString()
+      });
+      
+      // Log the call as blacklisted
+      await database.logCall(fromNumber, 'Blacklisted', `TCPA compliance message sent - ${blacklistEntry.reason}`);
+      
+      // Generate TwiML for TCPA compliance message
+      const twiML = twiMLHelpers.generateTCPAComplianceTwiML();
+      
+      res.set('Content-Type', 'text/xml');
+      res.send(twiML);
+      return;
+    }
+    
     // Check if caller is in contacts (whitelist)
     const contact = await database.getContactByPhoneNumber(fromNumber);
     
@@ -381,6 +407,263 @@ app.delete('/api/call-logs', async (req, res) => {
   } catch (error) {
     console.error('Error clearing call logs:', error);
     res.status(500).json({ error: 'Failed to clear call logs' });
+  }
+});
+
+// Blacklist Management API Endpoints
+
+// API endpoint to get all blacklist entries
+app.get('/api/blacklist', async (req, res) => {
+  try {
+    const blacklist = await database.getAllBlacklistEntries();
+    res.json(blacklist);
+  } catch (error) {
+    console.error('Error getting blacklist:', error);
+    res.status(500).json({ error: 'Failed to retrieve blacklist' });
+  }
+});
+
+// API endpoint to add a number to blacklist
+app.post('/api/blacklist', async (req, res) => {
+  try {
+    const { phone_number, reason, pattern_type } = req.body;
+    
+    if (!phone_number) {
+      return res.status(400).json({ error: 'Phone number is required' });
+    }
+    
+    const entry = await database.addToBlacklist(phone_number, reason, pattern_type);
+    
+    // Emit blacklist added event
+    io.emit('blacklist-added', entry);
+    
+    res.json(entry);
+  } catch (error) {
+    console.error('Error adding to blacklist:', error);
+    if (error.message.includes('UNIQUE constraint failed')) {
+      res.status(409).json({ error: 'Phone number already in blacklist' });
+    } else {
+      res.status(500).json({ error: 'Failed to add to blacklist' });
+    }
+  }
+});
+
+// API endpoint to remove a number from blacklist
+app.delete('/api/blacklist/:id', async (req, res) => {
+  try {
+    const { id } = req.params;
+    const result = await database.removeFromBlacklist(id);
+    
+    if (result.changes === 0) {
+      return res.status(404).json({ error: 'Blacklist entry not found' });
+    }
+    
+    // Emit blacklist removed event
+    io.emit('blacklist-removed', { id: parseInt(id) });
+    
+    res.json({ message: 'Number removed from blacklist successfully' });
+  } catch (error) {
+    console.error('Error removing from blacklist:', error);
+    res.status(500).json({ error: 'Failed to remove from blacklist' });
+  }
+});
+
+// API endpoint to clear all blacklist entries
+app.delete('/api/blacklist', async (req, res) => {
+  try {
+    const result = await database.clearAllBlacklist();
+    
+    // Emit all blacklist cleared event
+    io.emit('blacklist-cleared');
+    
+    res.json({ message: `Deleted ${result.changes} blacklist entries` });
+  } catch (error) {
+    console.error('Error clearing blacklist:', error);
+    res.status(500).json({ error: 'Failed to clear blacklist' });
+  }
+});
+
+// Webhook endpoint for generating whisper message when call is forwarded
+app.post('/generate-whisper', (req, res) => {
+  try {
+    const contactName = req.query.contactName || req.body.contactName;
+    
+    console.log(`Generating whisper for contact: ${contactName || 'unknown'}`);
+    
+    // Generate whisper TwiML
+    const twiML = twiMLHelpers.generateWhisperTwiML(contactName);
+    
+    res.set('Content-Type', 'text/xml');
+    res.send(twiML);
+    
+  } catch (error) {
+    console.error('Error generating whisper:', error);
+    
+    // Fallback whisper
+    const twiML = twiMLHelpers.generateWhisperTwiML();
+    res.set('Content-Type', 'text/xml');
+    res.send(twiML);
+  }
+});
+
+// Webhook endpoint for generating whisper message for screened calls
+app.post('/generate-screened-whisper', (req, res) => {
+  try {
+    const summary = req.query.summary || req.body.summary;
+    
+    console.log(`Generating screened whisper for: ${summary || 'unknown purpose'}`);
+    
+    // Generate screened whisper TwiML
+    const twiML = twiMLHelpers.generateScreenedWhisperTwiML(summary);
+    
+    res.set('Content-Type', 'text/xml');
+    res.send(twiML);
+    
+  } catch (error) {
+    console.error('Error generating screened whisper:', error);
+    
+    // Fallback whisper
+    const twiML = twiMLHelpers.generateScreenedWhisperTwiML();
+    res.set('Content-Type', 'text/xml');
+    res.send(twiML);
+  }
+});
+
+// Webhook endpoint for handling call acceptance
+app.post('/handle-call-acceptance', (req, res) => {
+  try {
+    const fromNumber = req.body.From;
+    const digits = req.body.Digits;
+    
+    console.log(`Call acceptance response from ${fromNumber}: ${digits || 'no key pressed'}`);
+    
+    if (digits) {
+      // Key was pressed - accept the call
+      console.log('Call accepted by recipient');
+      
+      // Emit call acceptance event
+      io.emit('call-accepted', {
+        from: fromNumber,
+        timestamp: new Date().toISOString()
+      });
+      
+      // Generate acceptance TwiML (connects the call)
+      const twiML = twiMLHelpers.generateCallAcceptanceTwiML();
+      
+      res.set('Content-Type', 'text/xml');
+      res.send(twiML);
+      
+    } else {
+      // No key pressed - reject the call
+      console.log('Call not accepted by recipient');
+      
+      // Emit call rejection event
+      io.emit('call-not-accepted', {
+        from: fromNumber,
+        timestamp: new Date().toISOString()
+      });
+      
+      // Hang up
+      const twiML = twiMLHelpers.generateRejectionTwiML();
+      res.set('Content-Type', 'text/xml');
+      res.send(twiML);
+    }
+    
+  } catch (error) {
+    console.error('Error handling call acceptance:', error);
+    
+    // Fallback - reject call
+    const twiML = twiMLHelpers.generateRejectionTwiML();
+    res.set('Content-Type', 'text/xml');
+    res.send(twiML);
+  }
+});
+
+// Webhook endpoint for handling dial status
+app.post('/handle-dial-status', (req, res) => {
+  try {
+    const fromNumber = req.body.From;
+    const dialStatus = req.body.DialStatus;
+    const callDuration = req.body.CallDuration;
+    
+    console.log(`Dial completed from ${fromNumber}: status=${dialStatus}, duration=${callDuration}`);
+    
+    // Emit dial completion event
+    io.emit('dial-completed', {
+      from: fromNumber,
+      status: dialStatus,
+      duration: callDuration,
+      timestamp: new Date().toISOString()
+    });
+    
+    // Generate dial status TwiML
+    const twiML = twiMLHelpers.generateDialStatusTwiML();
+    
+    res.set('Content-Type', 'text/xml');
+    res.send(twiML);
+    
+  } catch (error) {
+    console.error('Error handling dial status:', error);
+    
+    const twiML = twiMLHelpers.generateDialStatusTwiML();
+    res.set('Content-Type', 'text/xml');
+    res.send(twiML);
+  }
+});
+
+// Webhook endpoint for handling TCPA compliance responses
+app.post('/handle-tcpa-response', async (req, res) => {
+  try {
+    const fromNumber = req.body.From;
+    const digits = req.body.Digits;
+    const callSid = req.body.CallSid;
+    
+    console.log(`TCPA response from blacklisted number ${fromNumber}: ${digits || 'no response'}`);
+    
+    if (digits === '1') {
+      // Transfer to removal line
+      console.log('Blacklisted caller requested removal line transfer');
+      
+      // Emit TCPA removal request event
+      io.emit('tcpa-removal-requested', {
+        from: fromNumber,
+        callSid: callSid,
+        timestamp: new Date().toISOString()
+      });
+      
+      // Log the removal request
+      await database.logCall(fromNumber, 'TCPA Removal', 'Caller requested removal line transfer');
+      
+      // Generate removal line TwiML
+      const twiML = twiMLHelpers.generateTCPARemovalTwiML();
+      
+      res.set('Content-Type', 'text/xml');
+      res.send(twiML);
+      
+    } else {
+      // No valid response - hang up
+      console.log('No valid TCPA response from blacklisted caller');
+      
+      // Emit TCPA no response event
+      io.emit('tcpa-no-response', {
+        from: fromNumber,
+        callSid: callSid,
+        timestamp: new Date().toISOString()
+      });
+      
+      // Hang up
+      const twiML = twiMLHelpers.generateRejectionTwiML();
+      res.set('Content-Type', 'text/xml');
+      res.send(twiML);
+    }
+    
+  } catch (error) {
+    console.error('Error handling TCPA response:', error);
+    
+    // Fallback - hang up
+    const twiML = twiMLHelpers.generateRejectionTwiML();
+    res.set('Content-Type', 'text/xml');
+    res.send(twiML);
   }
 });
 

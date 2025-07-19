@@ -1,3 +1,178 @@
+/* PWA Styles */
+.hidden {
+    display: none !important;
+}
+
+.pwa-install-prompt {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background: rgba(0, 0, 0, 0.8);
+    z-index: 10000;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 20px;
+}
+
+.pwa-install-content {
+    background: white;
+    border-radius: 15px;
+    padding: 30px;
+    max-width: 400px;
+    width: 100%;
+    text-align: center;
+    box-shadow: 0 10px 30px rgba(0, 0, 0, 0.3);
+}
+
+.pwa-install-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 20px;
+}
+
+.pwa-install-header h3 {
+    margin: 0;
+    color: #2563eb;
+}
+
+.pwa-install-close {
+    background: none;
+    border: none;
+    font-size: 24px;
+    cursor: pointer;
+    color: #666;
+    padding: 5px;
+    border-radius: 50%;
+    width: 35px;
+    height: 35px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.pwa-install-close:hover {
+    background: #f0f0f0;
+}
+
+.pwa-install-content ul {
+    text-align: left;
+    margin: 20px 0;
+    padding-left: 20px;
+}
+
+.pwa-install-content li {
+    margin: 10px 0;
+    color: #555;
+}
+
+.pwa-install-actions {
+    display: flex;
+    gap: 10px;
+    justify-content: center;
+    margin-top: 25px;
+}
+
+.pwa-update-banner {
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    background: #2563eb;
+    color: white;
+    padding: 15px;
+    z-index: 9999;
+    box-shadow: 0 2px 10px rgba(0, 0, 0, 0.2);
+}
+
+.pwa-update-content {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    max-width: 1200px;
+    margin: 0 auto;
+}
+
+.pwa-update-actions {
+    display: flex;
+    gap: 10px;
+}
+
+/* Samsung Device Optimizations */
+.samsung-device .container {
+    padding: 15px;
+}
+
+.galaxy-fold .section {
+    margin-bottom: 20px;
+}
+
+.galaxy-fold.unfolded {
+    /* Optimizations for unfolded Z Fold 3 */
+}
+
+.galaxy-fold.unfolded .container {
+    max-width: 1400px;
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 30px;
+    align-items: start;
+}
+
+.galaxy-fold.unfolded header {
+    grid-column: 1 / -1;
+}
+
+.galaxy-fold.folded {
+    /* Optimizations for folded Z Fold 3 */
+}
+
+.galaxy-fold.folded .container {
+    max-width: 100%;
+    padding: 10px;
+}
+
+.galaxy-fold.folded .section {
+    padding: 20px;
+}
+
+/* PWA Mode Styles */
+.pwa-mode body {
+    padding-top: env(safe-area-inset-top);
+    padding-bottom: env(safe-area-inset-bottom);
+}
+
+.pwa-mode header {
+    position: sticky;
+    top: 0;
+    z-index: 100;
+}
+
+/* Mobile Responsive */
+@media (max-width: 768px) {
+    .pwa-install-content {
+        margin: 10px;
+        padding: 20px;
+    }
+    
+    .pwa-install-actions {
+        flex-direction: column;
+    }
+    
+    .pwa-update-content {
+        flex-direction: column;
+        gap: 10px;
+        text-align: center;
+    }
+    
+    .galaxy-fold.unfolded .container {
+        grid-template-columns: 1fr;
+    }
+}
+
 /* Reset and Base Styles */
 * {
     margin: 0;
@@ -608,4 +783,64 @@ footer {
 
 .empty-state p {
     margin-bottom: 20px;
+}
+
+/* Blacklist Management */
+.add-blacklist-form {
+    background: #fee;
+    border: 1px solid #fbb;
+    padding: 20px;
+    border-radius: 8px;
+    margin-bottom: 30px;
+}
+
+.blacklist-controls {
+    margin-bottom: 20px;
+}
+
+.blacklist-container {
+    max-height: 400px;
+    overflow-y: auto;
+}
+
+.blacklist-item {
+    background: #f8f9fa;
+    padding: 15px;
+    margin-bottom: 10px;
+    border-radius: 8px;
+    border-left: 4px solid #e53e3e;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+}
+
+.blacklist-info h4 {
+    margin-bottom: 5px;
+    color: #2d3748;
+}
+
+.blacklist-info p {
+    color: #718096;
+    font-size: 14px;
+    margin-bottom: 3px;
+}
+
+.blacklist-item .btn {
+    padding: 6px 12px;
+    font-size: 12px;
+}
+
+/* Pattern type styling */
+.blacklist-info p:nth-child(3) {
+    color: #805ad5;
+    font-weight: 600;
+}
+
+/* Mobile responsive for blacklist */
+@media (max-width: 768px) {
+    .blacklist-item {
+        flex-direction: column;
+        gap: 10px;
+        text-align: center;
+    }
 }

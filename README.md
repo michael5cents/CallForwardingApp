@@ -220,6 +220,19 @@ For production deployment:
 
 MIT License - feel free to modify and distribute as needed.
 
+## PWA Installation Success ✅
+
+**Deployed Successfully**: Samsung Galaxy Z Fold 3 (July 19, 2025)
+
+### Key Installation Notes:
+- **HTTPS Required**: PWA installation only works over HTTPS, not localhost
+- **Ngrok URL**: Use `https://1dfc4aaa3e39.ngrok-free.app` for installation
+- **Samsung Internet**: Better PWA support than Chrome on Samsung devices
+- **Background Monitoring**: Continues running after installation for real-time call alerts
+
+### Next Steps:
+See `PROJECT_PLANS.md` for planned home server deployment and feature enhancements.
+
 ## Support
 
 For issues or questions, please check the troubleshooting section or review the server logs for specific error messages.
