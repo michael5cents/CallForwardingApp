@@ -27,9 +27,15 @@ database.initializeDatabase()
     process.exit(1);
   });
 
-// Socket.IO connection handling
+// Socket.IO connection handling - SIMPLIFIED
 io.on('connection', (socket) => {
   console.log('Dashboard connected');
+  
+  // Send immediate test event to verify connection
+  socket.emit('connection-test', {
+    message: 'Connection established successfully',
+    timestamp: new Date().toISOString()
+  });
   
   socket.on('disconnect', () => {
     console.log('Dashboard disconnected');
