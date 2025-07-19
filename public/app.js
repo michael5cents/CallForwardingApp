@@ -67,20 +67,20 @@ document.addEventListener('DOMContentLoaded', () => {
 
 // Socket.io initialization and event handlers with PWA enhancements
 function initializeSocket() {
-    // Enhanced Socket.IO configuration for mobile PWA
+    // Enhanced Socket.IO configuration for mobile PWA with aggressive reconnection
     socket = io({
-        transports: ['websocket', 'polling'], // Fallback to polling for mobile
-        upgrade: true,
-        rememberUpgrade: true,
-        forceNew: false,
+        transports: ['polling', 'websocket'], // Start with polling for better Samsung compatibility
+        upgrade: false, // Disable upgrade to prevent connection drops
+        rememberUpgrade: false,
+        forceNew: true, // Force new connection to prevent stale connections
         reconnection: true,
-        reconnectionDelay: 1000,
-        reconnectionDelayMax: 5000,
-        maxReconnectionAttempts: 10,
-        timeout: 20000,
+        reconnectionDelay: 500, // Faster reconnection
+        reconnectionDelayMax: 2000, // Shorter max delay
+        maxReconnectionAttempts: 50, // More attempts
+        timeout: 10000, // Shorter timeout
         autoConnect: true,
-        pingTimeout: 60000,
-        pingInterval: 25000
+        pingTimeout: 30000, // Shorter ping timeout
+        pingInterval: 10000 // More frequent pings
     });
     
     socket.on('connect', () => {
@@ -387,13 +387,35 @@ function setupBackgroundHandling() {
         console.log('Window blurred - preparing for background');
     });
     
-    // Connection health check every 60 seconds
+    // Aggressive connection health check every 15 seconds
     setInterval(() => {
-        if (socket && !socket.connected && !document.hidden) {
-            console.log('Health check: Socket disconnected, attempting reconnect');
+        if (!socket || !socket.connected) {
+            console.log('Health check: Socket disconnected, forcing reconnect');
+            reconnectSocket();
+        } else {
+            // Send keepalive ping
+            socket.emit('ping', { timestamp: Date.now() });
+        }
+    }, 15000);
+    
+    // Emergency reconnection if no events received for 30 seconds
+    let lastEventTime = Date.now();
+    setInterval(() => {
+        const timeSinceLastEvent = Date.now() - lastEventTime;
+        if (timeSinceLastEvent > 30000 && socket && socket.connected) {
+            console.log('No events received for 30s, forcing reconnect');
             reconnectSocket();
         }
-    }, 60000);
+    }, 30000);
+    
+    // Update last event time on any socket event
+    const originalEmit = socket.on;
+    socket.on = function(event, callback) {
+        return originalEmit.call(this, event, function(...args) {
+            lastEventTime = Date.now();
+            return callback.apply(this, args);
+        });
+    };
 }
 
 // Force socket reconnection
