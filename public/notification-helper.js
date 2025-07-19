@@ -1,8 +1,13 @@
-// Enhanced notification function with audio alerts for background monitoring
+// Enhanced notification function with automatic focus for incoming calls
 function showBrowserNotification(title, body, type = 'info') {
-    console.log('📱 Showing notification:', title, body);
+    console.log('📱 Call detected - bringing PWA to focus:', title, body);
     
-    // Play audio alert immediately (works in background)
+    // IMMEDIATELY bring PWA into focus for calls
+    if (type === 'call' || type === 'screening') {
+        bringPWAToFocus();
+    }
+    
+    // Play audio alert
     playNotificationSound(type);
     
     // Also try browser notification
@@ -139,4 +144,74 @@ function playTone(audioContext, frequency, startTime, duration) {
     
     oscillator.start(startTime);
     oscillator.stop(startTime + duration);
+}
+
+// Bring PWA into focus automatically when calls come in
+function bringPWAToFocus() {
+    try {
+        console.log('🎯 Bringing PWA to focus...');
+        
+        // Method 1: Focus the window
+        if (window.focus) {
+            window.focus();
+        }
+        
+        // Method 2: Request user activation (more reliable on mobile)
+        if (document.hidden) {
+            // Try to wake up the PWA
+            if ('wakeLock' in navigator) {
+                navigator.wakeLock.request('screen').catch(e => console.log('Wake lock failed:', e));
+            }
+        }
+        
+        // Method 3: Use Notification click to bring to focus
+        if ('Notification' in window && Notification.permission === 'granted') {
+            const focusNotification = new Notification('📞 Incoming Call', {
+                body: 'Tap to view call details',
+                icon: '/icons/icon-192x192.png',
+                tag: 'focus-call',
+                requireInteraction: true,
+                silent: false,
+                actions: [
+                    {
+                        action: 'view',
+                        title: 'View Call',
+                        icon: '/icons/icon-72x72.png'
+                    }
+                ]
+            });
+            
+            focusNotification.onclick = function() {
+                window.focus();
+                this.close();
+            };
+            
+            // Auto-close focus notification after 5 seconds
+            setTimeout(() => {
+                focusNotification.close();
+            }, 5000);
+        }
+        
+        // Method 4: Request fullscreen to grab attention (Samsung specific)
+        if (document.documentElement.requestFullscreen && !document.fullscreenElement) {
+            // Brief fullscreen flash to get attention, then exit
+            document.documentElement.requestFullscreen().then(() => {
+                setTimeout(() => {
+                    if (document.exitFullscreen) {
+                        document.exitFullscreen();
+                    }
+                }, 1000);
+            }).catch(e => console.log('Fullscreen failed:', e));
+        }
+        
+        // Method 5: Vibration burst to get attention
+        if ('vibrate' in navigator) {
+            navigator.vibrate([1000, 200, 1000, 200, 1000]);
+        }
+        
+        console.log('✅ PWA focus methods attempted');
+        
+    } catch (error) {
+        console.error('Failed to bring PWA to focus:', error);
+    }
 }
