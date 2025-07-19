@@ -46,6 +46,9 @@ document.addEventListener('DOMContentLoaded', () => {
         loadCallLogs();
         loadBlacklist();
     }, 30000);
+    
+    // PWA Background/Foreground handling
+    setupBackgroundHandling();
 });
 
 // Socket.io initialization and event handlers with PWA enhancements
@@ -293,6 +296,106 @@ function initializeSocket() {
         addCallStep('❌ No TCPA response', 'Call terminated', 'complete');
         setTimeout(() => clearCallProgress(), 5000);
     });
+}
+
+// PWA Background/Foreground handling for Samsung Z Fold 3
+function setupBackgroundHandling() {
+    let isAppVisible = !document.hidden;
+    
+    // Page Visibility API - handles when app goes to background
+    document.addEventListener('visibilitychange', () => {
+        if (document.hidden) {
+            // App went to background
+            console.log('PWA went to background - maintaining connection...');
+            isAppVisible = false;
+            
+            // Store current time for sync when returning
+            localStorage.setItem('background-time', Date.now());
+            
+            // Keep socket alive but reduce activity
+            if (socket && socket.connected) {
+                socket.emit('app-backgrounded');
+            }
+        } else {
+            // App came back to foreground
+            console.log('PWA returned to foreground - refreshing connection...');
+            isAppVisible = true;
+            
+            // Check if we were backgrounded
+            const backgroundTime = localStorage.getItem('background-time');
+            if (backgroundTime) {
+                const backgroundDuration = Date.now() - parseInt(backgroundTime);
+                console.log(`App was backgrounded for ${backgroundDuration}ms`);
+                
+                // If backgrounded for more than 30 seconds, force reconnect
+                if (backgroundDuration > 30000 || !socket || !socket.connected) {
+                    console.log('Forcing socket reconnection after background period');
+                    reconnectSocket();
+                } else {
+                    // Quick sync for shorter background periods
+                    if (socket && socket.connected) {
+                        socket.emit('app-foregrounded');
+                        refreshAllData();
+                    }
+                }
+                
+                localStorage.removeItem('background-time');
+            }
+        }
+    });
+    
+    // Handle app focus/blur events (secondary detection)
+    window.addEventListener('focus', () => {
+        if (!isAppVisible) {
+            console.log('Window focused - ensuring connection');
+            if (!socket || !socket.connected) {
+                reconnectSocket();
+            } else {
+                refreshAllData();
+            }
+        }
+    });
+    
+    window.addEventListener('blur', () => {
+        console.log('Window blurred - preparing for background');
+    });
+    
+    // Connection health check every 60 seconds
+    setInterval(() => {
+        if (socket && !socket.connected && !document.hidden) {
+            console.log('Health check: Socket disconnected, attempting reconnect');
+            reconnectSocket();
+        }
+    }, 60000);
+}
+
+// Force socket reconnection
+function reconnectSocket() {
+    console.log('Forcing socket reconnection...');
+    updateSystemStatus('Reconnecting...', 'connecting');
+    
+    if (socket) {
+        socket.disconnect();
+    }
+    
+    // Small delay before reconnecting
+    setTimeout(() => {
+        initializeSocket();
+        
+        // Refresh all data after reconnection
+        setTimeout(() => {
+            refreshAllData();
+        }, 1000);
+    }, 500);
+}
+
+// Refresh all data from server
+function refreshAllData() {
+    console.log('Refreshing all data after foreground return');
+    loadContacts();
+    loadCallLogs();
+    loadBlacklist();
+    updateStats();
 }
 
 // Live call status functions

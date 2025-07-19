@@ -1,8 +1,10 @@
 // Service Worker for Call Forwarding Dashboard PWA
+// Enhanced for Samsung Z Fold 3 background monitoring
 // Provides background sync, push notifications, and offline functionality
 
-const CACHE_NAME = 'call-forwarding-v1.0.0';
+const CACHE_NAME = 'call-forwarding-v1.0.1';
 const BASE_URL = self.location.origin;
+let lastSyncTime = 0;
 
 // Files to cache for offline functionality
 const CACHE_URLS = [
@@ -108,7 +110,7 @@ self.addEventListener('fetch', (event) => {
   );
 });
 
-// Background sync for call log updates
+// Enhanced background sync for Samsung Z Fold 3
 self.addEventListener('sync', (event) => {
   console.log('[SW] Background sync triggered:', event.tag);
   
@@ -118,8 +120,33 @@ self.addEventListener('sync', (event) => {
     event.waitUntil(syncContacts());
   } else if (event.tag === 'sync-blacklist') {
     event.waitUntil(syncBlacklist());
+  } else if (event.tag === 'sync-all-data') {
+    event.waitUntil(syncAllData());
   }
 });
+
+// Enhanced background sync for all data
+async function syncAllData() {
+  console.log('[SW] Syncing all data in background...');
+  
+  try {
+    const results = await Promise.allSettled([
+      syncCallLogs(),
+      syncContacts(), 
+      syncBlacklist()
+    ]);
+    
+    console.log('[SW] Background sync completed:', results);
+    
+    // Update last sync time
+    lastSyncTime = Date.now();
+    
+    return true;
+  } catch (error) {
+    console.error('[SW] Background sync failed:', error);
+    return false;
+  }
+}
 
 // Push notification handler
 self.addEventListener('push', (event) => {
@@ -216,7 +243,7 @@ self.addEventListener('backgroundfetch', (event) => {
   }
 });
 
-// Message handler for communication with main app
+// Enhanced message handler for Samsung Z Fold 3 communication
 self.addEventListener('message', (event) => {
   console.log('[SW] Message received:', event.data);
   
@@ -226,7 +253,18 @@ self.addEventListener('message', (event) => {
     event.ports[0].postMessage({ version: CACHE_NAME });
   } else if (event.data.type === 'SYNC_DATA') {
     // Trigger background sync
-    self.registration.sync.register('sync-call-logs');
+    self.registration.sync.register('sync-all-data');
+  } else if (event.data.type === 'APP_FOREGROUNDED') {
+    // App came back to foreground - sync if needed
+    const timeSinceLastSync = Date.now() - lastSyncTime;
+    if (timeSinceLastSync > 30000) { // 30 seconds
+      console.log('[SW] App foregrounded - triggering sync');
+      self.registration.sync.register('sync-all-data');
+    }
+  } else if (event.data.type === 'APP_BACKGROUNDED') {
+    // App went to background - prepare for background operation
+    console.log('[SW] App backgrounded - enabling background monitoring');
+    lastSyncTime = Date.now();
   }
 });
 
