@@ -49,6 +49,20 @@ document.addEventListener('DOMContentLoaded', () => {
     
     // PWA Background/Foreground handling
     setupBackgroundHandling();
+    
+    // Service Worker message listener for enhanced focus
+    if ('serviceWorker' in navigator) {
+        navigator.serviceWorker.addEventListener('message', (event) => {
+            console.log('Message from service worker:', event.data);
+            
+            if (event.data.type === 'FORCE_FOCUS') {
+                console.log('Service worker requesting force focus');
+                if (typeof bringPWAToFocus === 'function') {
+                    bringPWAToFocus();
+                }
+            }
+        });
+    }
 });
 
 // Socket.io initialization and event handlers with PWA enhancements

@@ -149,67 +149,142 @@ function playTone(audioContext, frequency, startTime, duration) {
 // Bring PWA into focus automatically when calls come in
 function bringPWAToFocus() {
     try {
-        console.log('🎯 Bringing PWA to focus...');
+        console.log('🎯 Bringing PWA to focus - Enhanced Samsung method...');
         
-        // Method 1: Focus the window
-        if (window.focus) {
-            window.focus();
+        // Method 1: Multiple window focus attempts
+        for (let i = 0; i < 5; i++) {
+            setTimeout(() => {
+                if (window.focus) {
+                    window.focus();
+                }
+                if (window.parent && window.parent.focus) {
+                    window.parent.focus();
+                }
+                if (window.top && window.top.focus) {
+                    window.top.focus();
+                }
+            }, i * 100);
         }
         
-        // Method 2: Request user activation (more reliable on mobile)
-        if (document.hidden) {
-            // Try to wake up the PWA
-            if ('wakeLock' in navigator) {
-                navigator.wakeLock.request('screen').catch(e => console.log('Wake lock failed:', e));
+        // Method 2: Try to open new window to same app (forces focus)
+        try {
+            const currentUrl = window.location.href;
+            const newWindow = window.open(currentUrl, '_blank', 'width=400,height=600,scrollbars=yes,resizable=yes');
+            if (newWindow) {
+                setTimeout(() => {
+                    newWindow.close();
+                    window.focus();
+                }, 2000);
             }
+        } catch (e) {
+            console.log('New window method failed:', e);
         }
         
-        // Method 3: Use Notification click to bring to focus
+        // Method 3: Use history API manipulation to trigger focus
+        try {
+            const currentState = history.state;
+            history.pushState({focus: true, timestamp: Date.now()}, '', '?focus=true');
+            setTimeout(() => {
+                history.replaceState(currentState, '', window.location.pathname);
+                window.focus();
+            }, 100);
+        } catch (e) {
+            console.log('History manipulation failed:', e);
+        }
+        
+        // Method 4: Request user activation through screen wake
+        if (document.hidden && 'wakeLock' in navigator) {
+            navigator.wakeLock.request('screen').then(wakeLock => {
+                console.log('Screen wake lock acquired');
+                setTimeout(() => {
+                    wakeLock.release();
+                    window.focus();
+                }, 1000);
+            }).catch(e => console.log('Wake lock failed:', e));
+        }
+        
+        // Method 5: Persistent notification with auto-click simulation
         if ('Notification' in window && Notification.permission === 'granted') {
-            const focusNotification = new Notification('📞 Incoming Call', {
-                body: 'Tap to view call details',
+            const focusNotification = new Notification('📞 INCOMING CALL - TAP TO VIEW', {
+                body: 'Call in progress - Touch to return to app',
                 icon: '/icons/icon-192x192.png',
-                tag: 'focus-call',
+                tag: 'urgent-call-focus',
                 requireInteraction: true,
                 silent: false,
+                renotify: true,
+                sticky: true,
                 actions: [
                     {
                         action: 'view',
-                        title: 'View Call',
+                        title: '📞 View Call Now',
+                        icon: '/icons/icon-72x72.png'
+                    },
+                    {
+                        action: 'focus',
+                        title: '🎯 Bring to Front',
                         icon: '/icons/icon-72x72.png'
                     }
-                ]
+                ],
+                data: {
+                    url: window.location.href,
+                    timestamp: Date.now(),
+                    forceOpen: true
+                }
             });
             
             focusNotification.onclick = function() {
+                console.log('Notification clicked - focusing window');
                 window.focus();
+                if (window.parent) window.parent.focus();
                 this.close();
             };
             
-            // Auto-close focus notification after 5 seconds
+            // Keep notification persistent for 10 seconds
             setTimeout(() => {
                 focusNotification.close();
-            }, 5000);
+            }, 10000);
         }
         
-        // Method 4: Request fullscreen to grab attention (Samsung specific)
+        // Method 6: Document visibility change manipulation
+        try {
+            // Trigger visibility change events that might wake the app
+            document.dispatchEvent(new Event('visibilitychange'));
+            window.dispatchEvent(new Event('focus'));
+            document.dispatchEvent(new Event('click'));
+        } catch (e) {
+            console.log('Event dispatch failed:', e);
+        }
+        
+        // Method 7: Request fullscreen with immediate exit (attention grabber)
         if (document.documentElement.requestFullscreen && !document.fullscreenElement) {
-            // Brief fullscreen flash to get attention, then exit
             document.documentElement.requestFullscreen().then(() => {
+                console.log('Fullscreen activated for attention');
                 setTimeout(() => {
                     if (document.exitFullscreen) {
                         document.exitFullscreen();
                     }
-                }, 1000);
+                    window.focus();
+                }, 500);
             }).catch(e => console.log('Fullscreen failed:', e));
         }
         
-        // Method 5: Vibration burst to get attention
+        // Method 8: Strong vibration pattern for Samsung
         if ('vibrate' in navigator) {
-            navigator.vibrate([1000, 200, 1000, 200, 1000]);
+            // Multiple vibration bursts
+            navigator.vibrate([1000, 300, 1000, 300, 1000]);
+            setTimeout(() => navigator.vibrate([500, 200, 500]), 2000);
+            setTimeout(() => navigator.vibrate([200, 100, 200]), 4000);
         }
         
-        console.log('✅ PWA focus methods attempted');
+        // Method 9: Service Worker client focus (if available)
+        if ('serviceWorker' in navigator && navigator.serviceWorker.controller) {
+            navigator.serviceWorker.controller.postMessage({
+                type: 'FOCUS_CLIENT',
+                url: window.location.href
+            });
+        }
+        
+        console.log('✅ Enhanced PWA focus methods attempted - should bring app to front');
         
     } catch (error) {
         console.error('Failed to bring PWA to focus:', error);

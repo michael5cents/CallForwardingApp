@@ -2,7 +2,7 @@
 // Enhanced for Samsung Z Fold 3 background monitoring
 // Provides background sync, push notifications, and offline functionality
 
-const CACHE_NAME = 'call-forwarding-v1.3.0';
+const CACHE_NAME = 'call-forwarding-v1.4.0';
 const BASE_URL = self.location.origin;
 let lastSyncTime = 0;
 
@@ -266,8 +266,52 @@ self.addEventListener('message', (event) => {
     // App went to background - prepare for background operation
     console.log('[SW] App backgrounded - enabling background monitoring');
     lastSyncTime = Date.now();
+  } else if (event.data.type === 'FOCUS_CLIENT') {
+    // Enhanced client focus for Samsung devices
+    console.log('[SW] Focusing client:', event.data.url);
+    focusClient(event.data.url);
   }
 });
+
+// Enhanced client focus function for Samsung Z Fold 3
+async function focusClient(targetUrl) {
+  try {
+    const clients = await self.clients.matchAll({
+      type: 'window',
+      includeUncontrolled: true
+    });
+    
+    console.log('[SW] Found clients:', clients.length);
+    
+    for (let client of clients) {
+      if (client.url.includes(targetUrl) || !targetUrl) {
+        console.log('[SW] Attempting to focus client:', client.url);
+        
+        // Try multiple focus methods
+        if (client.focus) {
+          await client.focus();
+        }
+        
+        // Send focus message to client
+        client.postMessage({
+          type: 'FORCE_FOCUS',
+          timestamp: Date.now()
+        });
+        
+        return;
+      }
+    }
+    
+    // If no existing client found, try to open new window
+    if (self.clients.openWindow && targetUrl) {
+      console.log('[SW] Opening new window for:', targetUrl);
+      await self.clients.openWindow(targetUrl);
+    }
+    
+  } catch (error) {
+    console.error('[SW] Focus client failed:', error);
+  }
+}
 
 // Periodic background sync for Samsung Internet
 self.addEventListener('periodicsync', (event) => {
