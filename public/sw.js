@@ -2,7 +2,7 @@
 // Enhanced for Samsung Z Fold 3 background monitoring
 // Provides background sync, push notifications, and offline functionality
 
-const CACHE_NAME = 'call-forwarding-v1.0.1';
+const CACHE_NAME = 'call-forwarding-v1.1.0';
 const BASE_URL = self.location.origin;
 let lastSyncTime = 0;
 
@@ -11,6 +11,7 @@ const CACHE_URLS = [
   '/',
   '/index.html',
   '/app.js',
+  '/notification-helper.js',
   '/styles.css',
   '/manifest.json',
   '/socket.io/socket.io.js'

@@ -234,12 +234,15 @@
                         console.log('SW registered: ', registration);
                         swRegistration = registration;
                         
-                        // Check for updates
+                        // Check for updates and force refresh for notifications
                         registration.addEventListener('updatefound', () => {
                             const newWorker = registration.installing;
                             newWorker.addEventListener('statechange', () => {
                                 if (newWorker.state === 'installed' && navigator.serviceWorker.controller) {
-                                    showUpdateBanner();
+                                    console.log('New service worker available - updating for notifications...');
+                                    // Auto-update for critical notification features
+                                    newWorker.postMessage({ type: 'SKIP_WAITING' });
+                                    window.location.reload();
                                 }
                             });
                         });
