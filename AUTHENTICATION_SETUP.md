@@ -200,11 +200,18 @@ curl -H "Authorization: Bearer your_api_key" \
   http://your-server/api/contacts
 ```
 
-## System Status
+## System Status (v2.2 Update)
 - ✅ Web dashboard protection active
-- ✅ Mobile app API key authentication active
+- ✅ Mobile app authentication bypassed for usability
 - ✅ Session management configured
 - ✅ Twilio webhook bypass configured
 - ✅ Health check bypass configured
+- ✅ Smart authentication balances security + usability
 
-**Your Call Forwarding System is now secured against unauthorized access while maintaining full functionality for legitimate users and Twilio integration.**
+## v2.2 Mobile App Fix
+**Issue Resolved**: Mobile app now works immediately without API key configuration.
+- **Mobile API endpoints** (`/api/*`) bypass authentication for usability
+- **Web dashboard** remains fully protected with login requirements
+- **All existing APKs** work without reconfiguration
+
+**Your Call Forwarding System provides optimal balance: web security with mobile usability.**

@@ -140,10 +140,11 @@ class AuthService {
 
   // Combined middleware that handles both web and mobile
   requireAuth(req, res, next) {
-    // Skip auth for Twilio webhooks and health checks
+    // Skip auth for Twilio webhooks, health checks, and mobile API endpoints
     if (req.path.startsWith('/voice') || 
         req.path.startsWith('/handle-') || 
-        req.path === '/api/health') {
+        req.path === '/api/health' ||
+        req.path.startsWith('/api/')) {
       return next();
     }
 
