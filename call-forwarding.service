@@ -1,0 +1,19 @@
+[Unit]
+Description=Call Forwarding App with AI Gatekeeper
+After=network.target
+Wants=network.target
+
+[Service]
+Type=simple
+User=michael5cents
+WorkingDirectory=/home/michael5cents/call-forwarding-app
+Environment=NODE_ENV=production
+ExecStart=/usr/bin/node server.js
+Restart=always
+RestartSec=10
+StandardOutput=syslog
+StandardError=syslog
+SyslogIdentifier=call-forwarding-app
+
+[Install]
+WantedBy=multi-user.target

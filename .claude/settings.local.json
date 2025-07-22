@@ -1,0 +1,9 @@
+{
+  "permissions": {
+    "allow": [
+      "mcp__desktop-commander__write_file",
+      "Bash(chmod:*)"
+    ],
+    "deny": []
+  }
+}

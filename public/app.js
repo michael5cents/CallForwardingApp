@@ -492,6 +492,12 @@ function addCallStep(title, details, status = '') {
 function clearCallProgress() {
     callProgress.classList.add('hidden');
     updateSystemStatus('System Ready', 'ready');
+    
+    // Clear any lingering call steps
+    const callSteps = document.getElementById('callSteps');
+    if (callSteps) {
+        callSteps.innerHTML = '';
+    }
 }
 
 // API Functions

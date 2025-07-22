@@ -2,19 +2,141 @@ require('dotenv').config();
 const express = require('express');
 const path = require('path');
 const http = require('http');
+const https = require('https');
+const fs = require('fs');
 const socketIo = require('socket.io');
+const session = require('express-session');
 const database = require('./database');
 const twiMLHelpers = require('./twiML_helpers');
 const anthropicHelper = require('./anthropic_helper');
+const auth = require('./auth');
 
 const app = express();
+const PORT = process.env.PORT || 3001;
+
+// Create HTTP server but configure Node.js for outgoing HTTPS
+process.env["NODE_TLS_REJECT_UNAUTHORIZED"] = 0; // Allow self-signed certs for outgoing requests
 const server = http.createServer(app);
 const io = socketIo(server);
-const PORT = process.env.PORT || 3000;
 
 // Middleware
 app.use(express.urlencoded({ extended: true }));
 app.use(express.json());
+
+// Session middleware for web authentication
+app.use(session({
+  secret: process.env.SESSION_SECRET || 'call-forwarding-secret-key-2025',
+  resave: false,
+  saveUninitialized: false,
+  cookie: { 
+    secure: false, // Set to true if using HTTPS
+    maxAge: 24 * 60 * 60 * 1000 // 24 hours
+  }
+}));
+
+// CORS middleware for mobile app access
+app.use((req, res, next) => {
+  res.header('Access-Control-Allow-Origin', '*');
+  res.header('Access-Control-Allow-Methods', 'GET, POST, PUT, DELETE, OPTIONS');
+  res.header('Access-Control-Allow-Headers', 'Content-Type, Authorization, User-Agent, Accept, Host, X-API-Key');
+  
+  if (req.method === 'OPTIONS') {
+    res.sendStatus(200);
+  } else {
+    next();
+  }
+});
+
+// Authentication routes
+app.post('/login', (req, res) => {
+  const { username, password } = req.body;
+  
+  if (auth.verifyWebCredentials(username, password)) {
+    req.session.authenticated = true;
+    req.session.token = auth.generateSessionToken();
+    res.redirect('/');
+  } else {
+    res.status(401).send(`
+      <!DOCTYPE html>
+      <html>
+      <head>
+        <title>Call Forwarding System - Login Failed</title>
+        <style>
+          body { 
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            display: flex; justify-content: center; align-items: center; 
+            height: 100vh; margin: 0; 
+          }
+          .login-container { 
+            background: white; padding: 2rem; border-radius: 10px; 
+            box-shadow: 0 10px 25px rgba(0,0,0,0.2); max-width: 400px; width: 100%; 
+          }
+          h1 { text-align: center; margin-bottom: 2rem; color: #333; }
+          .error { color: #e74c3c; margin-bottom: 1rem; text-align: center; font-weight: 500; }
+          .form-group { margin-bottom: 1rem; }
+          label { display: block; margin-bottom: 0.5rem; color: #555; font-weight: 500; }
+          input { 
+            width: 100%; padding: 0.75rem; border: 2px solid #ddd; border-radius: 5px; 
+            font-size: 1rem; transition: border-color 0.3s;
+          }
+          input:focus { outline: none; border-color: #667eea; }
+          button { 
+            width: 100%; padding: 0.75rem; background: #667eea; color: white; 
+            border: none; border-radius: 5px; font-size: 1rem; cursor: pointer;
+            transition: background 0.3s;
+          }
+          button:hover { background: #5a6fd8; }
+        </style>
+      </head>
+      <body>
+        <div class="login-container">
+          <h1>🔒 Call Forwarding System</h1>
+          <div class="error">❌ Invalid username or password</div>
+          <form method="POST" action="/login">
+            <div class="form-group">
+              <label for="username">Username:</label>
+              <input type="text" id="username" name="username" required value="${username || ''}">
+            </div>
+            <div class="form-group">
+              <label for="password">Password:</label>
+              <input type="password" id="password" name="password" required>
+            </div>
+            <button type="submit">Login</button>
+          </form>
+        </div>
+      </body>
+      </html>
+    `);
+  }
+});
+
+app.get('/logout', (req, res) => {
+  req.session.destroy();
+  res.redirect('/');
+});
+
+app.get('/api/auth-info', (req, res) => {
+  res.json({
+    credentials: auth.getCredentials(),
+    message: 'Use these credentials for mobile app configuration'
+  });
+});
+
+// Handle host header issues
+app.use((req, res, next) => {
+  // Allow requests from popzplace.com
+  if (req.headers.host && req.headers.host.includes('popzplace.com')) {
+    next();
+  } else {
+    next();
+  }
+});
+
+// Apply authentication middleware
+app.use((req, res, next) => auth.requireAuth(req, res, next));
+
+// Serve static files (protected by auth)
 app.use(express.static('public'));
 
 // Initialize database on startup
@@ -489,6 +611,96 @@ app.delete('/api/blacklist', async (req, res) => {
   }
 });
 
+// ===========================================
+// MOBILE API ENDPOINTS FOR FLUTTER APP
+// ===========================================
+
+// Mobile health check endpoint
+app.get('/api/health', async (req, res) => {
+  res.json({
+    status: 'healthy',
+    service: 'call-forwarding-main-server',
+    port: PORT,
+    timestamp: new Date().toISOString(),
+    uptime: process.uptime()
+  });
+});
+
+// Mobile sync endpoint - complete data sync
+app.get('/api/sync', async (req, res) => {
+  try {
+    const contacts = await database.getAllContacts();
+    const callLogs = await database.getCallLogs();
+    const blacklist = await database.getAllBlacklistEntries();
+    
+    res.json({
+      timestamp: Date.now(),
+      contacts: contacts || [],
+      blacklist: blacklist || [],
+      callLogs: callLogs || [],
+      stats: {
+        totalContacts: contacts?.length || 0,
+        recentCalls: callLogs?.length || 0,
+        aiScreeningStatus: 'active'
+      },
+      currentCall: null,
+      newCalls: [],
+      callUpdates: []
+    });
+  } catch (error) {
+    console.error('Error in mobile sync:', error);
+    res.status(500).json({ error: 'Failed to sync data' });
+  }
+});
+
+// Mobile updates endpoint - for polling
+app.get('/api/updates', async (req, res) => {
+  try {
+    const since = parseInt(req.query.since) || 0;
+    const now = Date.now();
+    
+    // For initial load, send all data
+    if (since === 0) {
+      const contacts = await database.getAllContacts();
+      const callLogs = await database.getCallLogs();
+      const blacklist = await database.getAllBlacklistEntries();
+      
+      res.json({
+        timestamp: now,
+        newCalls: [],
+        callUpdates: [],
+        contacts: contacts || [],
+        blacklist: blacklist || [],
+        callLogs: callLogs || [],
+        stats: {
+          totalContacts: contacts?.length || 0,
+          recentCalls: callLogs?.length || 0,
+          aiScreeningStatus: 'active'
+        }
+      });
+    } else {
+      // For subsequent polls, just return empty updates
+      // Real-time updates come via Socket.IO events
+      res.json({
+        timestamp: now,
+        newCalls: [],
+        callUpdates: [],
+        contacts: null,
+        blacklist: null,
+        callLogs: null,
+        stats: {
+          totalContacts: 0,
+          recentCalls: 0,
+          aiScreeningStatus: 'active'
+        }
+      });
+    }
+  } catch (error) {
+    console.error('Error in mobile updates:', error);
+    res.status(500).json({ error: 'Failed to get updates' });
+  }
+});
+
 // Webhook endpoint for generating whisper message when call is forwarded
 app.post('/generate-whisper', (req, res) => {
   try {
@@ -712,14 +924,70 @@ app.get('/recording/:recordingSid', async (req, res) => {
   }
 });
 
+// Download recording directly from Twilio for mobile app
+app.get('/api/download-recording', async (req, res) => {
+  try {
+    const { url } = req.query;
+    
+    if (!url) {
+      return res.status(400).json({ error: 'Recording URL is required' });
+    }
+
+    console.log(`Downloading recording from Twilio: ${url}`);
+    
+    // Convert JSON URL to WAV format if needed
+    const audioUrl = url.replace('.json', '.wav');
+    console.log(`Audio URL: ${audioUrl}`);
+
+    // Use https module instead of fetch for better Twilio API compatibility
+    const urlObj = new URL(audioUrl);
+    const options = {
+      hostname: urlObj.hostname,
+      path: urlObj.pathname + urlObj.search,
+      method: 'GET',
+      headers: {
+        'Authorization': `Basic ${Buffer.from(`${process.env.TWILIO_ACCOUNT_SID}:${process.env.TWILIO_AUTH_TOKEN}`).toString('base64')}`,
+        'Accept': 'audio/wav,audio/mpeg,audio/*'
+      }
+    };
+
+    const request = https.request(options, (response) => {
+      if (response.statusCode !== 200) {
+        console.error(`Twilio API error: ${response.statusCode}`);
+        return res.status(response.statusCode).json({ error: `Twilio error: ${response.statusCode}` });
+      }
+
+      // Set headers for download
+      res.setHeader('Content-Type', 'audio/wav');
+      res.setHeader('Content-Disposition', 'attachment; filename="recording.wav"');
+      res.setHeader('Access-Control-Allow-Origin', '*');
+      res.setHeader('Cache-Control', 'public, max-age=3600');
+      
+      // Stream the response directly to client
+      response.pipe(res);
+    });
+
+    request.on('error', (error) => {
+      console.error('HTTPS request error:', error);
+      res.status(500).json({ error: 'Failed to download recording', details: error.message });
+    });
+
+    request.end();
+    
+  } catch (error) {
+    console.error('Error downloading recording:', error);
+    res.status(500).json({ error: 'Failed to download recording', details: error.message });
+  }
+});
+
 // Serve dashboard
 app.get('/', (req, res) => {
   res.sendFile(path.join(__dirname, 'public', 'index.html'));
 });
 
-// Start server
-server.listen(PORT, () => {
-  console.log(`Call forwarding app listening on port ${PORT}`);
+// Start HTTP server
+server.listen(PORT, '0.0.0.0', () => {
+  console.log(`Call forwarding HTTP app listening on 0.0.0.0:${PORT}`);
   console.log(`Webhook URL: ${process.env.BASE_URL}/voice`);
   console.log(`Dashboard: http://localhost:${PORT}`);
 });

@@ -1,238 +1,170 @@
-# Personal Call Forwarding App with AI Gatekeeper
+# Direct Internet Exposure Setup Guide
 
-A sophisticated Node.js application that intelligently handles incoming calls using Twilio and Claude AI. Known contacts get forwarded directly, while unknown callers are screened by an AI assistant that analyzes their purpose and routes calls accordingly.
+This guide will help you expose your .69 computer directly to the internet instead of using ngrok tunneling or VPS migration.
 
-## Features
+## Overview
 
-- **🤖 AI-Powered Call Screening**: Uses Claude AI to analyze unknown callers and intelligently route calls
-- **👥 Contact Whitelisting**: Direct forwarding for known contacts without screening
-- **📞 Flexible Call Routing**: Different handling based on call purpose (Urgent/Sales/Support/Personal/Spam)
-- **📊 Real-time Dashboard**: Live call monitoring with Socket.io for instant status updates
-- **📋 Call Logging**: Complete history with AI-generated summaries and voicemail recordings
-- **🎵 Voicemail Playback**: In-browser audio playback with authentication bypass
-- **🗑️ Log Management**: Delete individual call logs or clear all history
-- **🔒 Secure Configuration**: Environment-based credential management
-
-## Architecture
-
-### Core Components
-
-- **server.js**: Main Express server handling Twilio webhooks and API endpoints
-- **database.js**: SQLite database management for contacts and call logs
-- **anthropic_helper.js**: Claude AI integration for call analysis
-- **twiML_helpers.js**: TwiML generation utilities for different call scenarios
-- **public/**: Web dashboard for contact management and call monitoring
-
-### Call Flow
-
-1. **Incoming Call** → Twilio webhook to `/voice`
-2. **Contact Check** → Query database for whitelisted numbers
-3. **Path A (Known Contact)** → Direct forwarding with personalized whisper
-4. **Path B (Unknown Contact)** → AI gatekeeper engagement
-5. **Speech Analysis** → Claude AI analyzes caller intent
-6. **Intelligent Routing** → Route based on AI classification
+**Current Setup**: Server on 192.168.68.69:3001 → ngrok tunnel → Internet
+**New Setup**: Server on 192.168.68.69:3001 → Router port forwarding → Internet
 
 ## Prerequisites
 
-- Node.js 18+ and npm
-- Twilio account with phone number
-- Anthropic Claude API key
-- ngrok for local development
+- Your current call forwarding system working on 192.168.68.69:3001
+- Router admin access for port forwarding
+- Domain name (purchase from registrar like Namecheap, GoDaddy, etc.)
+- Static public IP or dynamic DNS service
 
-## Installation
+## Step-by-Step Implementation
 
-1. **Clone or download the project**
-   ```bash
-   cd call-forwarding-app
-   ```
+### Phase 1: Router Configuration
 
-2. **Install dependencies**
-   ```bash
-   npm install
-   ```
+#### 1.1 Configure Port Forwarding
+Access your router admin panel (typically 192.168.1.1 or 192.168.68.1) and set up:
 
-3. **Environment Configuration**
-   ```bash
-   cp .env.example .env
-   ```
-
-4. **Configure your `.env` file**
-   ```env
-   # Twilio Configuration
-   TWILIO_ACCOUNT_SID=your_twilio_account_sid_here
-   TWILIO_AUTH_TOKEN=your_twilio_auth_token_here
-   TWILIO_PHONE_NUMBER=your_twilio_phone_number_here
-
-   # Anthropic Claude API Configuration
-   ANTHROPIC_API_KEY=your_anthropic_api_key_here
-
-   # Personal Phone Number (where calls should be forwarded)
-   MY_PERSONAL_NUMBER=your_personal_phone_number_here
-
-   # Server Configuration
-   PORT=3000
-   BASE_URL=https://your-ngrok-url.ngrok.io
-   ```
-
-## Setup Instructions
-
-### 1. Twilio Setup
-
-1. **Create Twilio Account**: Sign up at [twilio.com](https://twilio.com)
-2. **Purchase Phone Number**: Buy a phone number in the Twilio Console
-3. **Get Credentials**: Note your Account SID and Auth Token from the dashboard
-4. **Configure Webhook**: Set your phone number's webhook URL to `https://your-ngrok-url.ngrok.io/voice`
-
-### 2. Anthropic API Setup
-
-1. **Create Account**: Sign up at [console.anthropic.com](https://console.anthropic.com)
-2. **Generate API Key**: Create a new API key in the dashboard
-3. **Add to Environment**: Set `ANTHROPIC_API_KEY` in your `.env` file
-
-### 3. Local Development
-
-1. **Install ngrok**: Download from [ngrok.com](https://ngrok.com)
-2. **Start the application**:
-   ```bash
-   npm start
-   ```
-3. **Expose with ngrok** (in another terminal):
-   ```bash
-   ngrok http 3000
-   ```
-4. **Update BASE_URL**: Copy the ngrok URL to your `.env` file
-5. **Configure Twilio**: Set the webhook URL in your Twilio phone number settings
-
-## Usage
-
-### Web Dashboard
-
-Access the dashboard at `http://localhost:3001` to:
-
-- **Live Call Monitoring**: Real-time status updates as calls are processed
-- **Manage Contacts**: Add/remove whitelisted contacts for direct forwarding
-- **View Call Logs**: Monitor all incoming calls with AI analysis and play voicemail recordings
-- **Log Management**: Delete individual logs or clear entire call history
-- **System Status**: Check contact count, recent calls, and AI screening status
-
-### Call Routing Logic
-
-**Whitelisted Contacts**:
-- Direct forwarding with personalized whisper
-- Status: "Whitelisted"
-
-**Unknown Callers**:
-- AI greeting: "Hello, you have reached the virtual assistant..."
-- Speech-to-text analysis via Claude AI
-- Routing based on AI classification:
-  - **Urgent/Sales**: Forward with screened whisper
-  - **Support/Personal**: Send to voicemail
-  - **Spam**: Polite rejection and hangup
-
-## API Endpoints
-
-### Twilio Webhooks
-- `POST /voice` - Main call entry point
-- `POST /handle-gather` - Process AI screening results
-- `POST /handle-recording` - Handle voicemail completion
-
-### Contact Management
-- `GET /api/contacts` - List all contacts
-- `POST /api/contacts` - Add new contact
-- `DELETE /api/contacts/:id` - Remove contact
-
-### Call Logs
-- `GET /api/call-logs` - Retrieve call history
-- `DELETE /api/call-logs/:id` - Delete specific call log
-- `DELETE /api/call-logs` - Clear all call logs
-
-### Recording Playback
-- `GET /recording/:recordingSid` - Proxy endpoint for Twilio recordings (bypasses authentication)
-
-## Database Schema
-
-### Contacts Table
-```sql
-CREATE TABLE contacts (
-  id INTEGER PRIMARY KEY AUTOINCREMENT,
-  name TEXT NOT NULL,
-  phone_number TEXT NOT NULL UNIQUE
-);
+```
+External Port 80 → Internal IP 192.168.68.69 Port 3001
+External Port 443 → Internal IP 192.168.68.69 Port 3001
 ```
 
-### Call Logs Table
-```sql
-CREATE TABLE call_logs (
-  id INTEGER PRIMARY KEY AUTOINCREMENT,
-  from_number TEXT NOT NULL,
-  status TEXT NOT NULL,
-  summary TEXT,
-  recording_url TEXT,
-  timestamp DATETIME DEFAULT CURRENT_TIMESTAMP
-);
+**Why both ports?**
+- Port 80: HTTP traffic, will redirect to HTTPS
+- Port 443: HTTPS traffic for secure connections
+
+#### 1.2 Verify Port Forwarding
+Test with online port checker tools:
+- https://www.canyouseeme.org/
+- https://www.yougetsignal.com/tools/open-ports/
+
+### Phase 2: Domain Setup
+
+#### 2.1 Purchase Domain
+Choose a domain name like:
+- `yourcallforwarding.com`
+- `yourname-calls.com`
+- `myphone-system.net`
+
+#### 2.2 Configure DNS
+Point your domain to your public IP:
+```
+A Record: @ → YOUR_PUBLIC_IP
+A Record: www → YOUR_PUBLIC_IP
+```
+
+#### 2.3 Dynamic DNS (if needed)
+If you don't have static IP, use services like:
+- No-IP (free)
+- DuckDNS (free)
+- Cloudflare Dynamic DNS
+
+### Phase 3: SSL Certificate Setup
+
+#### 3.1 Install Certbot (Let's Encrypt)
+```bash
+# On the .69 computer (assuming Ubuntu/Debian):
+sudo apt update
+sudo apt install certbot
+```
+
+#### 3.2 Get SSL Certificate
+```bash
+# Replace your-domain.com with your actual domain
+sudo certbot certonly --standalone -d your-domain.com -d www.your-domain.com
+
+# Follow the prompts and provide:
+# - Email address for renewal notifications
+# - Agree to terms of service
+# - Your domain name
+```
+
+#### 3.3 Set Up Auto-Renewal
+```bash
+# Add to crontab for automatic renewal
+sudo crontab -e
+
+# Add this line to run renewal check twice daily:
+0 12 * * * /usr/bin/certbot renew --quiet
+```
+
+### Phase 4: Server Updates
+
+The server needs updates to:
+1. Handle HTTPS properly with SSL certificates
+2. Redirect HTTP to HTTPS
+3. Add security headers
+4. Handle the domain-based setup
+
+### Phase 5: Flutter App Updates
+
+Update the Flutter app to use your domain instead of local IP:
+```dart
+// Change from:
+String _serverUrl = 'http://192.168.68.69:3001';
+
+// To:
+String _serverUrl = 'https://your-domain.com';
+```
+
+### Phase 6: Twilio Configuration
+
+Update your Twilio webhooks to use the new domain:
+```
+Voice URL: https://your-domain.com/voice
+Status Callback URL: https://your-domain.com/status
 ```
 
 ## Security Considerations
 
-- All credentials stored in environment variables
-- Input validation for phone numbers and contact data
-- SQLite database with prepared statements
-- Rate limiting recommended for production
-- HTTPS required for Twilio webhooks
+### Basic Security Measures
+1. **Firewall Rules**: Only allow necessary ports (22 for SSH, 80/443 for web)
+2. **Regular Updates**: Keep your system updated
+3. **Strong Passwords**: Use strong SSH passwords/keys
+4. **Rate Limiting**: Implement API rate limiting in the server
+
+### Network Security
+1. **DMZ Configuration**: Consider placing .69 computer in router DMZ
+2. **VPN Access**: Set up VPN for administrative access
+3. **Monitoring**: Monitor for unusual traffic patterns
 
 ## Troubleshooting
 
 ### Common Issues
+1. **Port forwarding not working**: Check router settings and restart router
+2. **Domain not resolving**: Wait 24-48 hours for DNS propagation
+3. **SSL certificate issues**: Ensure domain points to your IP before running certbot
+4. **Mobile app connection issues**: Check CORS settings in server
 
-1. **Webhook Not Receiving Calls**
-   - Check ngrok is running and URL is correct
-   - Verify Twilio phone number webhook configuration
-   - Ensure server is running on correct port
+### Testing Commands
+```bash
+# Test domain resolution
+nslookup your-domain.com
 
-2. **AI Analysis Failing**
-   - Verify Anthropic API key is valid
-   - Check API quota and usage limits
-   - Review server logs for specific errors
+# Test HTTPS connection
+curl -I https://your-domain.com/health
 
-3. **Call Forwarding Not Working**
-   - Confirm `MY_PERSONAL_NUMBER` format (e.g., +1234567890)
-   - Check Twilio account balance
-   - Verify phone number capabilities
+# Check SSL certificate
+openssl s_client -connect your-domain.com:443
+```
 
-### Development Tips
+## Cost Comparison
 
-- Use `npm run dev` with nodemon for auto-restart
-- Check browser console for frontend errors
-- Monitor server logs for webhook debugging
-- Test with Twilio's webhook testing tools
+### Direct Internet Exposure
+- Domain name: ~$15/year
+- Dynamic DNS (if needed): Free or ~$25/year
+- **Total**: ~$15-40/year
 
-## Production Deployment
+### VPS Alternative
+- Domain name: ~$15/year
+- VPS hosting: ~$144/year ($12/month)
+- **Total**: ~$159/year
 
-For production deployment:
+**Savings**: $120-145/year with direct exposure approach!
 
-1. **Environment**: Set `NODE_ENV=production`
-2. **Database**: Consider PostgreSQL for better performance
-3. **Security**: Implement rate limiting and request validation
-4. **Monitoring**: Add logging and error tracking
-5. **Scaling**: Use PM2 or similar for process management
+## Next Steps
 
-## License
+1. Complete router port forwarding configuration
+2. Purchase and configure domain name
+3. Set up SSL certificates
+4. Update server and Flutter app
+5. Test thoroughly before switching Twilio webhooks
 
-MIT License - feel free to modify and distribute as needed.
-
-## PWA Installation Success ✅
-
-**Deployed Successfully**: Samsung Galaxy Z Fold 3 (July 19, 2025)
-
-### Key Installation Notes:
-- **HTTPS Required**: PWA installation only works over HTTPS, not localhost
-- **Ngrok URL**: Use `https://1dfc4aaa3e39.ngrok-free.app` for installation
-- **Samsung Internet**: Better PWA support than Chrome on Samsung devices
-- **Background Monitoring**: Continues running after installation for real-time call alerts
-
-### Next Steps:
-See `PROJECT_PLANS.md` for planned home server deployment and feature enhancements.
-
-## Support
-
-For issues or questions, please check the troubleshooting section or review the server logs for specific error messages.
+This approach gives you the same benefits as VPS hosting (stable URL, HTTPS, mobile app internet access) at a fraction of the cost!
