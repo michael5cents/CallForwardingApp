@@ -1,24 +1,25 @@
 # CLAUDE.md - Call Forwarding App Project Context
 
 ## Global Context Framework Reference
-**Context Engineering Framework Path**: `/home/nichols-ai/workspace/context-engineering-framework`
-**Quick Access**: `~/cef` (symbolic link)
-**Environment Variable**: `$CONTEXT_FRAMEWORK_PATH`
+**Context Engineering Framework Path**: `/home/michael5cents/Downloads/context-engineering-starter.sh`
+**Implementation Date**: July 22, 2025
 
 ## Project Identity
 - **Name**: Personal Call Forwarding App with AI Gatekeeper
-- **Type**: Node.js web application with PWA capabilities
+- **Type**: Node.js web application with Progressive Web App capabilities
 - **Primary Purpose**: Intelligent call screening and forwarding using Twilio and Claude AI
-- **Target Platform**: Samsung Galaxy Z Fold 3 as PWA
+- **Target Platform**: Samsung Galaxy Z Fold 3 as PWA, Web Dashboard
+- **Version**: v2.2 - Smart Authentication with Mobile Bypass
 - **Port**: 3001 (for home server deployment)
 
 ## Technology Stack
-- **Backend**: Node.js with Express
+- **Backend**: Node.js with Express.js
 - **Database**: SQLite3 for contacts, call logs, and blacklist
 - **AI Integration**: Anthropic Claude API for call analysis
-- **Telephony**: Twilio for call handling and TwiML
+- **Telephony**: Twilio for call handling and TwiML responses
 - **Real-time**: Socket.io for live dashboard updates
 - **Frontend**: Vanilla JavaScript with PWA enhancements
+- **Authentication**: Smart bypass system (web protected, mobile open)
 - **Service Worker**: Background sync and push notifications
 
 ## Architecture Overview
@@ -30,7 +31,7 @@ Incoming Call → Twilio → Webhook → Call Forwarding App → AI Analysis →
                             Samsung Galaxy Z Fold 3
 ```
 
-## Context Engineering Framework Application
+## Context Engineering Implementation
 
 ### Hierarchical Classification
 - **Core Call Logic**: DNA level (fundamental call routing algorithms)
@@ -46,7 +47,7 @@ Incoming Call → Twilio → Webhook → Call Forwarding App → AI Analysis →
 - **Membranes (Interfaces)**: REST API, Socket.io events, Twilio webhooks
 - **Organelles (Sub-components)**: Contact manager, blacklist system, call logger, AI analyzer
 
-## Core Features (Current Implementation)
+## Core Features (Current Implementation v2.2)
 1. **AI-Powered Call Screening**: Claude AI analyzes unknown callers
 2. **Contact Whitelisting**: Direct forwarding for known contacts
 3. **Blacklist Management**: TCPA-compliant spam blocking
@@ -54,89 +55,137 @@ Incoming Call → Twilio → Webhook → Call Forwarding App → AI Analysis →
 5. **Call Logging**: Complete history with AI summaries
 6. **Voicemail Recording**: In-browser playback system
 7. **PWA Capabilities**: Offline support and background notifications
+8. **Smart Authentication**: Web dashboard protected, mobile app bypass
+9. **Server Management**: Desktop controls and auto-startup service
 
-## PWA Implementation Details
+## Authentication Architecture (v2.2)
 
-### Samsung Galaxy Z Fold 3 Optimizations - ✅ SUCCESSFULLY DEPLOYED
-- **Foldable Support**: Responsive design for folded/unfolded modes
-- **Background Connectivity**: Service worker with Socket.io fallbacks
-- **Push Notifications**: Real-time call alerts even when backgrounded
-- **Battery Optimization**: Adaptive polling based on battery level
-- **Screen Orientation**: Automatic layout adjustments for screen changes
+### Smart Authentication Strategy
+- **Web Dashboard**: Full login protection (michael5cents/5904)
+- **Mobile Endpoints**: Authentication bypassed for usability
+- **Twilio Webhooks**: Authentication bypassed (required for functionality)
+- **Health Checks**: Authentication bypassed for monitoring
 
-### PWA Installation Success Log
-**Date**: July 19, 2025
-**Device**: Samsung Galaxy Z Fold 3
-**Status**: ✅ INSTALLED AND ACTIVE
+### Security Balance
+```javascript
+// Authentication bypass logic
+if (req.path.startsWith('/voice') || 
+    req.path.startsWith('/handle-') || 
+    req.path === '/api/health' ||
+    req.path.startsWith('/api/')) {
+  return next(); // Bypass authentication
+}
+// Web dashboard requires login
+```
 
-**Installation Process:**
-1. **Issue Identified**: localhost:3001 doesn't support PWA installation (requires HTTPS)
-2. **Solution Applied**: Used ngrok HTTPS URL: https://1dfc4aaa3e39.ngrok-free.app
-3. **Missing Icons**: Generated all required PWA icon sizes (72x72 to 512x512)
-4. **Manifest Fixed**: Added `id` field and optimized `display_override` for Samsung
-5. **Installation Success**: PWA icon created on Samsung home screen
+## Code Standards & Patterns
 
-**Current Status:**
-- ✅ PWA installed on Samsung Galaxy Z Fold 3 home screen
-- ✅ Service worker active and registered
-- ✅ Background monitoring enabled
-- ✅ Real-time call notifications ready
-- ✅ Offline functionality working
-- ⏳ Testing background call monitoring in progress
+### File Organization
+```
+call-forwarding-app/
+├── CLAUDE.md (this file - project context)
+├── server.js (main Express server)
+├── auth.js (smart authentication system)
+├── database.js (SQLite database management)
+├── anthropic_helper.js (Claude AI integration)
+├── twiML_helpers.js (TwiML response generators)
+├── manage-server.sh (server management script)
+├── public/
+│   ├── index.html (PWA dashboard)
+│   ├── app.js (frontend JavaScript with PWA)
+│   ├── styles.css (responsive CSS)
+│   ├── manifest.json (PWA manifest)
+│   └── sw.js (service worker)
+├── .claude/commands/ (workflow templates)
+├── docs/PRPs/ (product requirements)
+├── examples/ (code patterns)
+└── templates/ (reusable templates)
+```
 
-### Service Worker Features
-- **Background Sync**: Syncs call logs, contacts, and blacklist when offline
-- **Push Notifications**: Critical call alerts with vibration patterns
-- **Offline Support**: Cached data and graceful degradation
-- **Update Management**: Automatic service worker updates
+### Coding Standards
+- **ES6+ JavaScript**: Modern syntax and features
+- **Async/Await**: For asynchronous operations
+- **Error Handling**: Comprehensive try-catch blocks
+- **Logging**: Detailed debug output for troubleshooting
+- **Security**: Input validation, prepared statements, environment variables
+- **Testing**: Manual testing via Twilio webhook tools
 
-### Connectivity Strategy
-- **Primary**: WebSocket via Socket.io for real-time updates
-- **Fallback**: HTTP polling for mobile network limitations
-- **Background**: Service worker sync for missed updates
-- **Offline**: LocalStorage cache with automatic sync on reconnection
+### API Endpoint Patterns
+```javascript
+// Standard API response format
+app.get('/api/endpoint', async (req, res) => {
+  try {
+    const result = await operation();
+    res.json(result);
+  } catch (error) {
+    console.error('Operation error:', error);
+    res.status(500).json({ error: error.message });
+  }
+});
+```
 
-## API Endpoints
+## Development Workflow
 
-### Twilio Webhooks
-- `POST /voice` - Main call entry point with intelligent routing
-- `POST /handle-gather` - AI speech analysis and routing decision
-- `POST /handle-recording` - Voicemail completion handler
-- `POST /handle-dial-status` - Call completion status tracking
+### New Feature Process
+1. **Context Gathering**: Review CLAUDE.md and existing patterns
+2. **PRP Creation**: Use template for complex features
+3. **Implementation**: Follow established patterns
+4. **Testing**: Manual testing with Twilio tools
+5. **Documentation**: Update relevant docs
+6. **Version Control**: Commit to main branch with version tag
 
-### Contact Management
-- `GET /api/contacts` - List whitelisted contacts
-- `POST /api/contacts` - Add new whitelisted contact
-- `DELETE /api/contacts/:id` - Remove contact from whitelist
+### Debugging Process
+1. **Log Analysis**: Check server logs and debug output
+2. **Webhook Testing**: Use Twilio webhook tools
+3. **Database Inspection**: Query SQLite directly if needed
+4. **Real-time Monitoring**: Use dashboard and Socket.io events
+5. **Error Reproduction**: Create minimal test cases
 
-### Blacklist Management  
-- `GET /api/blacklist` - List blacklisted numbers
-- `POST /api/blacklist` - Add number to blacklist with TCPA compliance
-- `DELETE /api/blacklist/:id` - Remove number from blacklist
-- `DELETE /api/blacklist` - Clear entire blacklist
+### Deployment Process
+1. **Local Testing**: Verify all functionality works
+2. **Server Restart**: Use desktop controls or management script
+3. **Health Check**: Verify /api/health endpoint
+4. **Integration Test**: Test complete call flow
+5. **Documentation**: Update deployment logs
 
-### Call Logs
-- `GET /api/call-logs` - Retrieve call history with AI summaries
-- `DELETE /api/call-logs/:id` - Delete specific call log
-- `DELETE /api/call-logs` - Clear all call logs
+## Environment Configuration
 
-### Recording Playback
-- `GET /recording/:recordingSid` - Proxy for Twilio recordings (bypasses auth)
+### Required Environment Variables
+```env
+# Twilio Configuration
+TWILIO_ACCOUNT_SID=your_twilio_account_sid
+TWILIO_AUTH_TOKEN=your_twilio_auth_token  
+TWILIO_PHONE_NUMBER=your_twilio_phone_number
+
+# Anthropic Claude API
+ANTHROPIC_API_KEY=your_anthropic_api_key
+
+# Personal Configuration
+MY_PERSONAL_NUMBER=your_personal_phone_number
+
+# Server Configuration
+PORT=3001
+BASE_URL=https://your-domain.com
+
+# Authentication (v2.2)
+AUTH_USERNAME=michael5cents
+AUTH_PASSWORD=5904
+SESSION_SECRET=your_session_secret_key
+```
 
 ## Database Schema
 
-### Contacts Table
+### Core Tables
 ```sql
+-- Contacts (whitelist)
 CREATE TABLE contacts (
   id INTEGER PRIMARY KEY AUTOINCREMENT,
   name TEXT NOT NULL,
   phone_number TEXT NOT NULL UNIQUE,
   date_added DATETIME DEFAULT CURRENT_TIMESTAMP
 );
-```
 
-### Blacklist Table
-```sql
+-- Blacklist (spam protection)  
 CREATE TABLE blacklist (
   id INTEGER PRIMARY KEY AUTOINCREMENT,
   phone_number TEXT NOT NULL UNIQUE,
@@ -144,10 +193,8 @@ CREATE TABLE blacklist (
   pattern_type TEXT DEFAULT 'exact',
   date_added DATETIME DEFAULT CURRENT_TIMESTAMP
 );
-```
 
-### Call Logs Table
-```sql
+-- Call logs (complete history)
 CREATE TABLE call_logs (
   id INTEGER PRIMARY KEY AUTOINCREMENT,
   from_number TEXT NOT NULL,
@@ -160,129 +207,120 @@ CREATE TABLE call_logs (
 
 ## Call Flow Logic
 
-### Whitelisted Contacts
-1. Incoming call checked against contacts database
-2. Direct forwarding with personalized whisper message
-3. Real-time dashboard update: "Whitelisted"
+### Decision Tree
+1. **Incoming Call** → Check against contacts database
+2. **Whitelisted Contact** → Direct forward with personalized message
+3. **Unknown Caller** → AI screening with Claude analysis
+4. **Blacklisted Number** → TCPA compliance message + hangup
+5. **AI Analysis** → Route based on intent classification
+6. **Voicemail** → Record and store with AI summary
+7. **Dashboard Update** → Real-time notification via Socket.io
 
-### Unknown Callers
-1. AI greeting: "Hello. What can I help you with today?"
-2. Speech-to-text capture and Claude AI analysis
-3. Intelligent routing based on AI classification:
-   - **Urgent/Sales**: Forward with AI summary whisper
-   - **Support/Personal**: Send to voicemail for later review
-   - **Spam**: Polite rejection and immediate hangup
-
-### Blacklisted Numbers
-1. TCPA compliance message with legal warning
-2. Option to press 1 for Do Not Call removal line
-3. Automatic call termination after compliance message
-
-## AI Assistant Guidelines
-
-### Context Awareness
-- Always reference this CLAUDE.md for project context
-- Apply Context Engineering Framework principles from `$CONTEXT_FRAMEWORK_PATH`
-- Maintain hierarchical thinking for feature complexity
-- Use biological metaphors for system organization
-
-### Development Standards
-- **Code Quality**: ES6+ JavaScript, error handling, meaningful names
-- **Security**: Input validation, SQLite prepared statements, environment variables
-- **Testing**: Manual testing via Twilio webhook tools and browser
-- **Documentation**: Self-documenting code with inline comments
-
-### PWA Best Practices
-- **Performance**: Efficient caching strategies and minimal resource usage
-- **Accessibility**: Mobile-first design with touch-friendly interfaces
-- **Battery Life**: Adaptive background activity based on device state
-- **Network**: Graceful handling of connection loss and recovery
-
-## Environment Configuration
-```env
-# Twilio Configuration
-TWILIO_ACCOUNT_SID=your_twilio_account_sid
-TWILIO_AUTH_TOKEN=your_twilio_auth_token
-TWILIO_PHONE_NUMBER=your_twilio_phone_number
-
-# Anthropic Claude API
-ANTHROPIC_API_KEY=your_anthropic_api_key
-
-# Personal Configuration
-MY_PERSONAL_NUMBER=your_personal_phone_number
-
-# Server Configuration
-PORT=3001
-BASE_URL=https://your-ngrok-url.ngrok.io
+### AI Integration Points
+```javascript
+// Claude AI analysis pattern
+const analysis = await anthropic.messages.create({
+  model: "claude-3-sonnet-20240229",
+  max_tokens: 150,
+  messages: [{
+    role: "user", 
+    content: `Analyze this caller intent: "${transcript}"`
+  }]
+});
 ```
-
-## Deployment Context
-
-### Home Server Integration
-- **Target Server**: Mac Mini 2012 i7 (16GB RAM, Catalina)
-- **Process Manager**: PM2 for automatic restart and monitoring
-- **Reverse Proxy**: nginx routing from port 80/443 to 3001
-- **External Access**: Tailscale VPN for secure remote connectivity
-
-### Samsung Galaxy Z Fold 3 Access
-- **Installation**: PWA install via Samsung Internet Browser
-- **Connectivity**: Tailscale VPN or local network access
-- **Notifications**: Native push notifications for call alerts
-- **Background**: Continuous monitoring via service worker
-
-## Security Considerations
-- **HTTPS Required**: Twilio webhooks require secure connections
-- **Input Validation**: Phone number formatting and sanitization
-- **Rate Limiting**: Prevent API abuse (recommended for production)
-- **Credential Management**: Environment variables for all secrets
-- **TCPA Compliance**: Legal protection for blacklist handling
 
 ## Performance Expectations
 - **Response Time**: <100ms for call routing decisions
 - **Concurrent Calls**: Handles multiple simultaneous incoming calls
 - **Memory Usage**: ~100-150MB typical, scales with call volume
-- **Battery Impact**: Optimized for Samsung device battery life
-- **Network Usage**: Minimal when cached, efficient real-time updates
+- **Database Performance**: SQLite optimized for read-heavy workloads
+- **Real-time Updates**: Sub-second Socket.io event propagation
 
-## Validation Checkpoints
+## Security Considerations
+- **HTTPS Required**: Twilio webhooks require secure connections
+- **Input Validation**: Phone number formatting and sanitization
+- **SQL Injection Protection**: Prepared statements for all queries
+- **Environment Variables**: All secrets stored in .env
+- **TCPA Compliance**: Legal protection for blacklist handling
+- **Authentication Bypass**: Carefully configured for functionality
 
-### Before Deployment Complete
-1. **Call Routing**: All three paths (whitelist, screening, blacklist) functional
-2. **PWA Installation**: Successfully installs on Samsung Galaxy Z Fold 3
-3. **Background Notifications**: Receives call alerts when app is closed
-4. **Data Persistence**: Contacts, blacklist, and logs survive app restart
-5. **Network Resilience**: Graceful handling of connection loss/recovery
+## Deployment Architecture
 
-### Success Criteria
-- Real-time call monitoring works in foreground and background
-- PWA installs and functions properly on Samsung Galaxy Z Fold 3
-- AI call screening accurately categorizes caller intent
-- Blacklist provides TCPA-compliant spam protection
-- System remains stable under normal call volume
+### Local Development
+- **Platform**: Mac Mini 2012 i7 (16GB RAM, Catalina)
+- **Process Manager**: PM2 or systemd service for auto-restart
+- **Port**: 3001 with desktop management controls
+- **Database**: SQLite file-based storage
 
-## Project Structure
-```
-call-forwarding-app/
-├── CLAUDE.md (this file)
-├── PROJECT_PLANS.md (ongoing plans and features)
-├── README.md (comprehensive setup guide)
-├── server.js (main Express server)
-├── database.js (SQLite database management)
-├── anthropic_helper.js (Claude AI integration)
-├── twiML_helpers.js (TwiML response generators)
-├── public/
-│   ├── index.html (PWA dashboard)
-│   ├── app.js (frontend JavaScript with PWA enhancements)
-│   ├── styles.css (responsive CSS)
-│   ├── manifest.json (PWA manifest)
-│   └── sw.js (service worker)
-├── package.json (dependencies)
-└── .env (environment configuration)
-```
+### Production Deployment (DMZ/VPS)
+- **VPS Required**: For external mobile app access
+- **Domain**: calls.popzplace.com pointing to public IP
+- **SSL Certificate**: Required for HTTPS Twilio webhooks
+- **Firewall**: Ports 22 (SSH), 80 (HTTP), 443 (HTTPS), 3001 (App)
+- **Reverse Proxy**: nginx routing from 80/443 to 3001
 
-## Framework Integration Notes
-- This project applies Context Engineering Framework principles
-- Reference framework documentation at `$CONTEXT_FRAMEWORK_PATH` for methodology
-- Use hierarchical progression for complex feature development
-- Apply biological metaphors for system architecture decisions
-- Maintain CLAUDE.md as central context document for all AI interactions
+## Testing Strategy
+
+### Manual Testing Checklist
+- [ ] Incoming call routing (whitelist, screening, blacklist)
+- [ ] AI analysis accuracy and response time
+- [ ] Real-time dashboard updates
+- [ ] PWA installation and functionality
+- [ ] Mobile app compatibility
+- [ ] Voicemail recording and playback
+- [ ] Database operations (CRUD)
+- [ ] Authentication system (web login, mobile bypass)
+
+### Integration Testing
+- [ ] Twilio webhook delivery and processing
+- [ ] Claude API integration and error handling
+- [ ] Socket.io real-time communication
+- [ ] Database transaction consistency
+- [ ] PWA service worker functionality
+
+## AI Assistant Guidelines
+
+### Context Awareness Rules
+- Always reference this CLAUDE.md for project context
+- Apply context engineering principles from starter script
+- Maintain hierarchical thinking for feature complexity
+- Use biological metaphors for system organization
+- Follow established patterns and conventions
+
+### Development Standards
+- **Code Quality**: Modern JavaScript, comprehensive error handling
+- **Security**: Never expose secrets, validate inputs, use prepared statements
+- **Testing**: Manual verification of complete call flows
+- **Documentation**: Self-documenting code with inline comments
+- **Version Control**: Meaningful commits with version numbers
+
+### Communication Protocol
+- Use PRP templates for complex feature requests
+- Reference examples directory for coding patterns
+- Follow workflow commands for common tasks
+- Update documentation with each significant change
+- Maintain changelog for version tracking
+
+## Success Metrics
+- **Call Processing Speed**: Sub-100ms routing decisions
+- **AI Accuracy**: >90% correct intent classification
+- **System Uptime**: 99%+ availability
+- **User Experience**: One-click PWA installation success
+- **Mobile Compatibility**: All APK versions functional
+- **Security**: Zero unauthorized access incidents
+
+## Version History
+- **v1.x**: Initial implementation without authentication
+- **v2.0**: Added comprehensive feature set and PWA capabilities
+- **v2.1**: Complete authentication system (broke mobile usability)
+- **v2.2**: Smart authentication bypass (optimal balance)
+
+## Context Engineering Integration
+This project now follows context engineering principles for:
+- **Comprehensive Context**: This CLAUDE.md provides complete project overview
+- **Structured Communication**: PRP templates and workflow commands
+- **Example-Driven Development**: Code patterns in examples directory
+- **Validation Gates**: Testing checklists and quality assurance
+- **Progressive Complexity**: From basic routing to AI-powered screening
+
+**The Call Forwarding App is now optimized for AI assistant collaboration through context engineering principles while maintaining its core functionality as an intelligent call management system.**

@@ -1,0 +1,831 @@
+.hidden {
+    display: none !important;
+}
+
+.pwa-install-content {
+    background: white;
+    border-radius: 15px;
+    padding: 30px;
+    max-width: 400px;
+    width: 100%;
+    text-align: center;
+    box-shadow: 0 10px 30px rgba(0, 0, 0, 0.3);
+}
+
+.pwa-install-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 20px;
+}
+
+.pwa-install-header h3 {
+    margin: 0;
+    color: #2563eb;
+}
+
+.pwa-install-close {
+    background: none;
+    border: none;
+    font-size: 24px;
+    cursor: pointer;
+    color: #666;
+    padding: 5px;
+    border-radius: 50%;
+    width: 35px;
+    height: 35px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.pwa-install-close:hover {
+    background: #f0f0f0;
+}
+
+.pwa-install-content ul {
+    text-align: left;
+    margin: 20px 0;
+    padding-left: 20px;
+}
+
+.pwa-install-content li {
+    margin: 10px 0;
+    color: #555;
+}
+
+.pwa-install-actions {
+    display: flex;
+    gap: 10px;
+    justify-content: center;
+    margin-top: 25px;
+}
+
+.pwa-update-banner {
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    background: #2563eb;
+    color: white;
+    padding: 15px;
+    z-index: 9999;
+    box-shadow: 0 2px 10px rgba(0, 0, 0, 0.2);
+}
+
+.pwa-update-content {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    max-width: 1200px;
+    margin: 0 auto;
+}
+
+.pwa-update-actions {
+    display: flex;
+    gap: 10px;
+}
+
+/* Samsung Device Optimizations */
+.samsung-device .container {
+    padding: 15px;
+}
+
+.galaxy-fold .section {
+    margin-bottom: 20px;
+}
+
+.galaxy-fold.unfolded {
+    /* Optimizations for unfolded Z Fold 3 */
+}
+
+.galaxy-fold.unfolded .container {
+    max-width: 1400px;
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 30px;
+    align-items: start;
+}
+
+.galaxy-fold.unfolded header {
+    grid-column: 1 / -1;
+}
+
+.galaxy-fold.folded {
+    /* Optimizations for folded Z Fold 3 */
+}
+
+.galaxy-fold.folded .container {
+    max-width: 100%;
+    padding: 10px;
+}
+
+.galaxy-fold.folded .section {
+    padding: 20px;
+}
+
+/* PWA Mode Styles */
+.pwa-mode body {
+    padding-top: env(safe-area-inset-top);
+    padding-bottom: env(safe-area-inset-bottom);
+}
+
+.pwa-mode header {
+    position: sticky;
+    top: 0;
+    z-index: 100;
+}
+
+/* Mobile Responsive */
+@media (max-width: 768px) {
+    .pwa-install-content {
+        margin: 10px;
+        padding: 20px;
+    }
+    
+    .pwa-install-actions {
+        flex-direction: column;
+    }
+    
+    .pwa-update-content {
+        flex-direction: column;
+        gap: 10px;
+        text-align: center;
+    }
+    
+    .galaxy-fold.unfolded .container {
+        grid-template-columns: 1fr;
+    }
+}
+
+/* Reset and Base Styles */
+* {
+    margin: 0;
+    padding: 0;
+    box-sizing: border-box;
+}
+
+body {
+    font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+    background-color: #f5f7fa;
+    color: #333;
+    line-height: 1.6;
+}
+
+.container {
+    max-width: 1200px;
+    margin: 0 auto;
+    padding: 20px;
+}
+
+/* Header */
+header {
+    text-align: center;
+    margin-bottom: 40px;
+    padding: 20px;
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    color: white;
+    border-radius: 10px;
+}
+
+header h1 {
+    font-size: 2.5em;
+    margin-bottom: 10px;
+}
+
+.subtitle {
+    font-size: 1.1em;
+    opacity: 0.9;
+}
+
+/* Sections */
+.section {
+    background: white;
+    padding: 30px;
+    margin-bottom: 30px;
+    border-radius: 10px;
+    box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+}
+
+.section h2 {
+    color: #4a5568;
+    margin-bottom: 20px;
+    font-size: 1.8em;
+}
+
+.section h3 {
+    color: #2d3748;
+    margin-bottom: 15px;
+    font-size: 1.3em;
+}
+
+/* Forms */
+.add-contact-form {
+    background: #f8f9fa;
+    padding: 20px;
+    border-radius: 8px;
+    margin-bottom: 30px;
+}
+
+.form-group {
+    margin-bottom: 15px;
+}
+
+.form-group label {
+    display: block;
+    margin-bottom: 5px;
+    font-weight: 600;
+    color: #4a5568;
+}
+
+.form-group input {
+    width: 100%;
+    padding: 12px;
+    border: 2px solid #e2e8f0;
+    border-radius: 6px;
+    font-size: 16px;
+    transition: border-color 0.3s;
+}
+
+.form-group input:focus {
+    outline: none;
+    border-color: #667eea;
+    box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.1);
+}
+
+/* Buttons */
+.btn {
+    padding: 12px 24px;
+    border: none;
+    border-radius: 6px;
+    font-size: 16px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.3s;
+    text-decoration: none;
+    display: inline-block;
+}
+
+.btn-primary {
+    background: #667eea;
+    color: white;
+}
+
+.btn-primary:hover {
+    background: #5a67d8;
+    transform: translateY(-2px);
+}
+
+.btn-secondary {
+    background: #718096;
+    color: white;
+}
+
+.btn-secondary:hover {
+    background: #4a5568;
+}
+
+.btn-danger {
+    background: #e53e3e;
+    color: white;
+    padding: 8px 16px;
+    font-size: 14px;
+}
+
+.btn-danger:hover {
+    background: #c53030;
+}
+
+/* Contacts List */
+.contacts-container {
+    display: grid;
+    gap: 15px;
+}
+
+.contact-item {
+    background: #f8f9fa;
+    padding: 15px;
+    border-radius: 8px;
+    border-left: 4px solid #667eea;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+}
+
+.contact-info h4 {
+    margin-bottom: 5px;
+    color: #2d3748;
+}
+
+.contact-info p {
+    color: #718096;
+    font-size: 14px;
+}
+
+/* Call Logs */
+.logs-controls {
+    margin-bottom: 20px;
+}
+
+.logs-container {
+    max-height: 400px;
+    overflow-y: auto;
+}
+
+.log-item {
+    background: #f8f9fa;
+    padding: 15px;
+    margin-bottom: 10px;
+    border-radius: 8px;
+    border-left: 4px solid #38a169;
+}
+
+.log-item.rejected {
+    border-left-color: #e53e3e;
+}
+
+.log-item.screening {
+    border-left-color: #ed8936;
+}
+
+.log-item.voicemail {
+    border-left-color: #3182ce;
+}
+
+.log-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 8px;
+}
+
+.log-phone {
+    font-weight: 600;
+    color: #2d3748;
+}
+
+.log-status {
+    padding: 4px 8px;
+    border-radius: 4px;
+    font-size: 12px;
+    font-weight: 600;
+    text-transform: uppercase;
+}
+
+.log-status.whitelisted {
+    background: #c6f6d5;
+    color: #22543d;
+}
+
+.log-status.forwarded {
+    background: #c6f6d5;
+    color: #22543d;
+}
+
+.log-status.rejected {
+    background: #fed7d7;
+    color: #742a2a;
+}
+
+.log-status.screening {
+    background: #feebc8;
+    color: #7c2d12;
+}
+
+.log-status.voicemail {
+    background: #bee3f8;
+    color: #2c5282;
+}
+
+.log-timestamp {
+    font-size: 12px;
+    color: #718096;
+}
+
+.log-summary {
+    color: #4a5568;
+    font-size: 14px;
+}
+
+/* Status Grid */
+.status-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+    gap: 20px;
+}
+
+.status-item {
+    background: #f8f9fa;
+    padding: 20px;
+    border-radius: 8px;
+    text-align: center;
+}
+
+.status-item h4 {
+    color: #4a5568;
+    margin-bottom: 10px;
+}
+
+.status-value {
+    font-size: 2em;
+    font-weight: 700;
+    color: #667eea;
+}
+
+/* Loading Overlay */
+.loading-overlay {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background: rgba(0, 0, 0, 0.5);
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    align-items: center;
+    z-index: 1000;
+    visibility: hidden;
+    opacity: 0;
+    transition: all 0.3s;
+}
+
+.loading-overlay.show {
+    visibility: visible;
+    opacity: 1;
+}
+
+.spinner {
+    width: 40px;
+    height: 40px;
+    border: 4px solid #f3f3f3;
+    border-top: 4px solid #667eea;
+    border-radius: 50%;
+    animation: spin 1s linear infinite;
+    margin-bottom: 20px;
+}
+
+@keyframes spin {
+    0% { transform: rotate(0deg); }
+    100% { transform: rotate(360deg); }
+}
+
+/* Toast Notifications */
+.toast-container {
+    position: fixed;
+    top: 20px;
+    right: 20px;
+    z-index: 1100;
+}
+
+.toast {
+    background: #38a169;
+    color: white;
+    padding: 15px 20px;
+    border-radius: 6px;
+    margin-bottom: 10px;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+    animation: slideIn 0.3s ease-out;
+}
+
+.toast.error {
+    background: #e53e3e;
+}
+
+@keyframes slideIn {
+    from {
+        transform: translateX(100%);
+        opacity: 0;
+    }
+    to {
+        transform: translateX(0);
+        opacity: 1;
+    }
+}
+
+/* Footer */
+footer {
+    text-align: center;
+    padding: 20px;
+    color: #718096;
+    margin-top: 40px;
+}
+
+/* Responsive Design */
+@media (max-width: 768px) {
+    .container {
+        padding: 10px;
+    }
+    
+    .section {
+        padding: 20px;
+    }
+    
+    header h1 {
+        font-size: 2em;
+    }
+    
+    .contact-item {
+        flex-direction: column;
+        gap: 10px;
+    }
+    
+    .log-header {
+        flex-direction: column;
+        gap: 5px;
+    }
+    
+    .status-grid {
+        grid-template-columns: 1fr;
+    }
+}
+
+/* Live Call Status */
+.call-status-container {
+    background: #f8f9fa;
+    border-radius: 8px;
+    padding: 20px;
+    margin-bottom: 20px;
+}
+
+.status-indicator {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    margin-bottom: 15px;
+}
+
+.status-light {
+    width: 12px;
+    height: 12px;
+    border-radius: 50%;
+    background: #38a169;
+    animation: pulse 2s infinite;
+}
+
+.status-light.incoming {
+    background: #ed8936;
+    animation: blink 0.5s infinite;
+}
+
+.status-light.screening {
+    background: #3182ce;
+    animation: spin 1s linear infinite;
+}
+
+.status-light.analyzing {
+    background: #805ad5;
+    animation: pulse 0.8s infinite;
+}
+
+.status-light.forwarding {
+    background: #38a169;
+    animation: blink 0.3s infinite;
+}
+
+.status-light.voicemail {
+    background: #e53e3e;
+}
+
+.status-light.rejected {
+    background: #a0aec0;
+}
+
+@keyframes pulse {
+    0% { opacity: 1; }
+    50% { opacity: 0.5; }
+    100% { opacity: 1; }
+}
+
+@keyframes blink {
+    0%, 50% { opacity: 1; }
+    51%, 100% { opacity: 0; }
+}
+
+@keyframes spin {
+    0% { transform: rotate(0deg); }
+    100% { transform: rotate(360deg); }
+}
+
+.call-progress {
+    background: white;
+    border-radius: 6px;
+    padding: 15px;
+    border-left: 4px solid #667eea;
+}
+
+.call-progress.hidden {
+    display: none;
+}
+
+.call-step {
+    margin-bottom: 10px;
+    padding: 8px 12px;
+    border-radius: 4px;
+    background: #f7fafc;
+    border-left: 3px solid #e2e8f0;
+}
+
+.call-step.active {
+    background: #ebf8ff;
+    border-left-color: #3182ce;
+}
+
+.call-step.complete {
+    background: #f0fff4;
+    border-left-color: #38a169;
+}
+
+.call-info {
+    font-weight: 600;
+    color: #2d3748;
+    margin-bottom: 5px;
+}
+
+.call-details {
+    font-size: 14px;
+    color: #718096;
+}
+
+.ai-analysis {
+    background: #fefcbf;
+    border: 1px solid #f6e05e;
+    border-radius: 4px;
+    padding: 10px;
+    margin-top: 10px;
+}
+
+.ai-analysis strong {
+    color: #744210;
+}
+
+/* Real-time updates animation */
+.flash-update {
+    animation: flashGreen 0.5s ease-in-out;
+}
+
+@keyframes flashGreen {
+    0% { background-color: #c6f6d5; }
+    100% { background-color: transparent; }
+}
+
+/* Small buttons for call logs */
+.btn-small {
+    padding: 4px 8px;
+    font-size: 12px;
+    margin-left: 8px;
+}
+
+/* Call log actions */
+.log-actions {
+    margin-top: 8px;
+    display: flex;
+    gap: 8px;
+}
+
+.log-actions .btn {
+    font-size: 12px;
+    padding: 4px 8px;
+}
+
+/* Audio modal */
+.audio-modal {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background: rgba(0, 0, 0, 0.7);
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    z-index: 2000;
+}
+
+.audio-modal-content {
+    background: white;
+    border-radius: 10px;
+    padding: 0;
+    width: 90%;
+    max-width: 500px;
+    box-shadow: 0 4px 20px rgba(0, 0, 0, 0.3);
+}
+
+.audio-modal-header {
+    background: #667eea;
+    color: white;
+    padding: 15px 20px;
+    border-radius: 10px 10px 0 0;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+}
+
+.audio-modal-header h3 {
+    margin: 0;
+}
+
+.audio-modal-close {
+    background: none;
+    border: none;
+    color: white;
+    font-size: 24px;
+    cursor: pointer;
+    padding: 0;
+    width: 30px;
+    height: 30px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.audio-modal-close:hover {
+    background: rgba(255, 255, 255, 0.2);
+    border-radius: 50%;
+}
+
+.audio-modal-body {
+    padding: 20px;
+}
+
+.audio-modal-actions {
+    margin-top: 15px;
+    display: flex;
+    gap: 10px;
+    justify-content: center;
+}
+
+/* Empty State */
+.empty-state {
+    text-align: center;
+    padding: 40px;
+    color: #718096;
+}
+
+.empty-state h3 {
+    margin-bottom: 10px;
+}
+
+.empty-state p {
+    margin-bottom: 20px;
+}
+
+/* Blacklist Management */
+.add-blacklist-form {
+    background: #fee;
+    border: 1px solid #fbb;
+    padding: 20px;
+    border-radius: 8px;
+    margin-bottom: 30px;
+}
+
+.blacklist-controls {
+    margin-bottom: 20px;
+}
+
+.blacklist-container {
+    max-height: 400px;
+    overflow-y: auto;
+}
+
+.blacklist-item {
+    background: #f8f9fa;
+    padding: 15px;
+    margin-bottom: 10px;
+    border-radius: 8px;
+    border-left: 4px solid #e53e3e;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+}
+
+.blacklist-info h4 {
+    margin-bottom: 5px;
+    color: #2d3748;
+}
+
+.blacklist-info p {
+    color: #718096;
+    font-size: 14px;
+    margin-bottom: 3px;
+}
+
+.blacklist-item .btn {
+    padding: 6px 12px;
+    font-size: 12px;
+}
+
+/* Pattern type styling */
+.blacklist-info p:nth-child(3) {
+    color: #805ad5;
+    font-weight: 600;
+}
+
+/* Mobile responsive for blacklist */
+@media (max-width: 768px) {
+    .blacklist-item {
+        flex-direction: column;
+        gap: 10px;
+        text-align: center;
+    }
+}

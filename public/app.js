@@ -47,29 +47,9 @@ document.addEventListener('DOMContentLoaded', () => {
         loadBlacklist();
     }, 30000);
     
-    // PWA Background/Foreground handling
+    // Background/Foreground handling
     setupBackgroundHandling();
     
-    // Service Worker message listener for enhanced focus
-    if ('serviceWorker' in navigator) {
-        navigator.serviceWorker.addEventListener('message', (event) => {
-            console.log('Message from service worker:', event.data);
-            
-            if (event.data.type === 'FORCE_FOCUS') {
-                console.log('Service worker requesting force focus');
-                // Simple focus fallback
-                try {
-                    if (typeof bringPWAToFocus === 'function') {
-                        bringPWAToFocus();
-                    } else {
-                        window.focus();
-                    }
-                } catch (error) {
-                    console.log('Focus failed:', error);
-                }
-            }
-        });
-    }
 });
 
 // Socket.io initialization and event handlers - SIMPLIFIED
@@ -108,7 +88,7 @@ function initializeSocket() {
         console.log('Disconnected from server:', reason);
         updateSystemStatus('Disconnected', 'error');
         
-        // Try to maintain connection for PWA
+        // Maintain stable connection
         if (reason === 'io server disconnect') {
             // Server disconnected, try manual reconnect
             setTimeout(() => {
@@ -351,7 +331,7 @@ function initializeSocket() {
     });
 }
 
-// PWA Background/Foreground handling for Samsung Z Fold 3
+// Background/Foreground handling
 function setupBackgroundHandling() {
     let isAppVisible = !document.hidden;
     
@@ -359,7 +339,7 @@ function setupBackgroundHandling() {
     document.addEventListener('visibilitychange', () => {
         if (document.hidden) {
             // App went to background
-            console.log('PWA went to background - maintaining connection...');
+            console.log('App went to background - maintaining connection...');
             isAppVisible = false;
             
             // Store current time for sync when returning
@@ -371,7 +351,7 @@ function setupBackgroundHandling() {
             }
         } else {
             // App came back to foreground
-            console.log('PWA returned to foreground - refreshing connection...');
+            console.log('App returned to foreground - refreshing connection...');
             isAppVisible = true;
             
             // Check if we were backgrounded
@@ -648,16 +628,19 @@ function renderCallLogs() {
                 </button>
             </div>
             ${log.summary ? `<div class="log-summary">${escapeHtml(log.summary)}</div>` : ''}
-            ${log.recording_url ? `
-                <div class="log-actions">
+            <div class="log-actions">
+                ${log.recording_url ? `
                     <button class="btn btn-secondary btn-small play-recording-btn" data-recording-url="${escapeHtml(convertToProxyUrl(log.recording_url))}" title="Play voicemail">
                         🎵 Play Recording
                     </button>
                     <a href="${convertToProxyUrl(log.recording_url)}" target="_blank" class="btn btn-secondary btn-small" title="Open recording in new tab">
                         📁 Open
                     </a>
-                </div>
-            ` : ''}
+                ` : ''}
+                <button class="btn btn-danger btn-small block-number-btn" data-phone-number="${escapeHtml(log.from_number)}" title="Block this number">
+                    🚫 Block Number
+                </button>
+            </div>
         </div>
     `).join('');
     
@@ -675,6 +658,43 @@ function renderCallLogs() {
             playRecording(recordingUrl);
         });
     });
+    
+    document.querySelectorAll('.block-number-btn').forEach(btn => {
+        btn.addEventListener('click', (e) => {
+            const phoneNumber = e.target.getAttribute('data-phone-number');
+            blockNumberFromLog(phoneNumber);
+        });
+    });
+}
+
+// Block number directly from call log
+async function blockNumberFromLog(phoneNumber) {
+    // Show confirmation dialog
+    const confirmed = confirm(`Block this number: ${formatPhoneNumber(phoneNumber)}?\n\nThis will add the number to your blacklist and future calls will be automatically rejected.`);
+    
+    if (!confirmed) {
+        return;
+    }
+    
+    try {
+        await apiRequest('/api/blacklist', {
+            method: 'POST',
+            body: JSON.stringify({
+                phone_number: phoneNumber,
+                reason: 'Blocked from call log',
+                pattern_type: 'exact'
+            })
+        });
+        
+        showToast(`Number ${formatPhoneNumber(phoneNumber)} has been blocked`, 'success');
+        // Entry will be added to blacklist via socket event
+    } catch (error) {
+        if (error.message.includes('409')) {
+            showToast('This phone number is already blacklisted', 'error');
+        } else {
+            showToast('Failed to block number', 'error');
+        }
+    }
 }
 
 // Statistics Updates
@@ -1018,35 +1038,7 @@ document.getElementById('blacklistPhone').addEventListener('input', function(e) 
     e.target.value = value;
 });
 
-// PWA-specific enhancements and background connectivity
-
-// Page Visibility API for PWA background handling
-document.addEventListener('visibilitychange', () => {
-    if (!document.hidden) {
-        console.log('App became visible - syncing data');
-        
-        // Refresh data when app becomes visible
-        loadContacts();
-        loadCallLogs();
-        loadBlacklist();
-        
-        // Reconnect socket if needed
-        if (socket && !socket.connected) {
-            console.log('Attempting to reconnect socket...');
-            socket.connect();
-        }
-        
-        // Update last sync timestamp
-        localStorage.setItem('last-sync', Date.now());
-    } else {
-        console.log('App went to background');
-        
-        // Store current state for when app returns
-        localStorage.setItem('last-background', Date.now());
-    }
-});
-
-// Network status monitoring for PWA
+// Network status monitoring
 window.addEventListener('online', () => {
     console.log('Network connection restored');
     showToast('Back online! Syncing data...', 'success');
@@ -1099,18 +1091,6 @@ if ('getBattery' in navigator) {
     });
 }
 
-// Background sync for PWA data updates
-function requestBackgroundSync() {
-    if ('serviceWorker' in navigator && 'sync' in window.ServiceWorkerRegistration.prototype) {
-        navigator.serviceWorker.ready.then((registration) => {
-            registration.sync.register('sync-call-logs');
-            registration.sync.register('sync-contacts');
-            registration.sync.register('sync-blacklist');
-        }).catch((error) => {
-            console.error('Background sync registration failed:', error);
-        });
-    }
-}
 
 // Enhanced notification support for critical call events
 function showCallNotification(title, body, data = {}) {
@@ -1149,10 +1129,10 @@ function showCallNotification(title, body, data = {}) {
     }
 }
 
-// PWA-specific data persistence
+// Data persistence utilities
 function saveDataToCache(key, data) {
     try {
-        localStorage.setItem(`pwa-cache-${key}`, JSON.stringify({
+        localStorage.setItem(`cache-${key}`, JSON.stringify({
             data: data,
             timestamp: Date.now()
         }));
@@ -1163,7 +1143,7 @@ function saveDataToCache(key, data) {
 
 function loadDataFromCache(key, maxAge = 300000) { // 5 minutes default
     try {
-        const cached = localStorage.getItem(`pwa-cache-${key}`);
+        const cached = localStorage.getItem(`cache-${key}`);
         if (cached) {
             const parsed = JSON.parse(cached);
             if (Date.now() - parsed.timestamp < maxAge) {
@@ -1207,7 +1187,3 @@ if (navigator.userAgent.includes('SM-F926') || window.screen.width > 1768) {
     handleScreenChange(mediaQuery); // Initial check
 }
 
-// Initialize PWA background sync on app start
-setTimeout(() => {
-    requestBackgroundSync();
-}, 2000);
