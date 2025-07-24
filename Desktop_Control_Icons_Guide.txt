@@ -1,0 +1,128 @@
+🖥️ CALL FORWARDING SERVER - DESKTOP CONTROL ICONS
+Created: July 22, 2025
+Status: Ready for Use
+
+==============================================
+📋 DESKTOP CONTROL ICONS CREATED
+==============================================
+
+1. 🚀 START-CALL-FORWARDING-SERVER
+   - Starts the Call Forwarding server with authentication
+   - Opens terminal window showing startup process
+   - URL: http://calls.popzplace.com:3001
+   - Login: michael5cents / 5904
+
+2. 🛑 STOP-CALL-FORWARDING-SERVER
+   - Stops the running Call Forwarding server
+   - Shows confirmation when server is stopped
+   - Safe to use anytime
+
+3. 📊 CHECK-SERVER-STATUS
+   - Shows if server is running or stopped
+   - Displays process information
+   - Shows web dashboard URL and login credentials
+
+4. ⚙️ INSTALL-AUTO-STARTUP
+   - Installs systemd service for automatic startup on boot
+   - Requires sudo password
+   - One-time setup for auto-startup
+
+5. 🎛️ SERVER-MANAGEMENT
+   - Comprehensive management interface
+   - Interactive menu with all server commands
+   - Shows status and allows start/stop/restart
+
+==============================================
+🔧 AUTO-STARTUP SERVICE SETUP
+==============================================
+
+Service File: /home/michael5cents/call-forwarding-app/call-forwarding.service
+Management Script: /home/michael5cents/call-forwarding-app/manage-server.sh
+
+TO ENABLE AUTO-STARTUP ON BOOT:
+1. Double-click "Install-Auto-Startup" desktop icon
+2. Enter sudo password when prompted
+3. Service will be installed and enabled
+
+MANUAL COMMAND LINE SETUP:
+cd /home/michael5cents/call-forwarding-app
+sudo cp call-forwarding.service /etc/systemd/system/
+sudo systemctl daemon-reload
+sudo systemctl enable call-forwarding.service
+
+==============================================
+⚡ SYSTEMD SERVICE COMMANDS
+==============================================
+
+Start Service:    sudo systemctl start call-forwarding.service
+Stop Service:     sudo systemctl stop call-forwarding.service
+Restart Service:  sudo systemctl restart call-forwarding.service
+Check Status:     sudo systemctl status call-forwarding.service
+Enable Auto-start: sudo systemctl enable call-forwarding.service
+Disable Auto-start: sudo systemctl disable call-forwarding.service
+
+==============================================
+🔄 MANAGEMENT SCRIPT USAGE
+==============================================
+
+Location: /home/michael5cents/call-forwarding-app/manage-server.sh
+
+Usage: ./manage-server.sh [command]
+
+Commands:
+- start           Start the server
+- stop            Stop the server  
+- restart         Restart the server
+- status          Show detailed status
+- install-service Install auto-startup service
+
+Example: ./manage-server.sh status
+
+==============================================
+📁 FILE LOCATIONS
+==============================================
+
+Desktop Icons: /home/michael5cents/Desktop/
+- Start-Call-Forwarding-Server.desktop
+- Stop-Call-Forwarding-Server.desktop
+- Check-Server-Status.desktop
+- Install-Auto-Startup.desktop
+- Server-Management.desktop
+
+Server Files: /home/michael5cents/call-forwarding-app/
+- server.js (main server)
+- auth.js (authentication)
+- manage-server.sh (management script)
+- call-forwarding.service (systemd service)
+
+==============================================
+🚀 QUICK START GUIDE
+==============================================
+
+FIRST TIME SETUP:
+1. Double-click "Install-Auto-Startup" to enable boot startup
+2. Double-click "Start-Call-Forwarding-Server" to start now
+3. Visit http://calls.popzplace.com:3001 (login: michael5cents/5904)
+
+DAILY USAGE:
+- Use "Check-Server-Status" to see if running
+- Use "Start" or "Stop" icons as needed
+- Server will auto-start on boot once service is installed
+
+MANAGEMENT:
+- Use "Server-Management" for comprehensive control
+- All icons open terminal windows with clear feedback
+- Safe to use - no system damage possible
+
+==============================================
+⚠️ IMPORTANT NOTES
+==============================================
+
+- Auto-startup requires one-time sudo password entry
+- Server runs on port 3001 with authentication enabled
+- Web dashboard requires login: michael5cents / 5904
+- Mobile app uses pre-configured API key
+- All desktop icons are executable and ready to use
+- Terminal windows show real-time status and feedback
+
+STATUS: 🟢 ALL DESKTOP CONTROLS READY FOR USE

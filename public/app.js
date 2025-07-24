@@ -212,19 +212,28 @@ function initializeSocket() {
     socket.on('call-voicemail', (data) => {
         updateSystemStatus('Sending to voicemail', 'voicemail');
         addCallStep('📧 Voicemail', 'Recording message for later review', 'active');
-        setTimeout(() => clearCallProgress(), 10000);
+        setTimeout(() => {
+            clearCallProgress();
+            updateSystemStatus('System Ready', 'ready');
+        }, 10000);
     });
     
     socket.on('call-rejected', (data) => {
         updateSystemStatus('Call rejected', 'rejected');
         addCallStep('❌ Call rejected', `${data.category} call blocked`, 'complete');
-        setTimeout(() => clearCallProgress(), 5000);
+        setTimeout(() => {
+            clearCallProgress();
+            updateSystemStatus('System Ready', 'ready');
+        }, 5000);
     });
     
     socket.on('call-recording-complete', (data) => {
         updateSystemStatus('Recording complete', 'ready');
         addCallStep('📧 Recording saved', 'Voicemail recorded successfully', 'complete');
-        setTimeout(() => clearCallProgress(), 3000);
+        setTimeout(() => {
+            clearCallProgress();
+            updateSystemStatus('System Ready', 'ready');
+        }, 3000);
         
         // Refresh call logs to show new entry
         setTimeout(() => loadCallLogs(), 1000);
@@ -233,33 +242,48 @@ function initializeSocket() {
     socket.on('call-no-speech', (data) => {
         updateSystemStatus('No speech detected', 'rejected');
         addCallStep('❌ No response', 'Call ended - no speech detected', 'complete');
-        setTimeout(() => clearCallProgress(), 5000);
+        setTimeout(() => {
+            clearCallProgress();
+            updateSystemStatus('System Ready', 'ready');
+        }, 5000);
     });
     
     socket.on('call-error', (data) => {
         updateSystemStatus('Call error occurred', 'error');
         addCallStep('⚠️ Error', data.error, 'complete');
-        setTimeout(() => clearCallProgress(), 5000);
+        setTimeout(() => {
+            clearCallProgress();
+            updateSystemStatus('System Ready', 'ready');
+        }, 5000);
     });
     
     // New events for call acceptance workflow
     socket.on('call-accepted', (data) => {
         updateSystemStatus('Call accepted', 'ready');
         addCallStep('✅ Call accepted', 'Call connected successfully', 'complete');
-        setTimeout(() => clearCallProgress(), 3000);
+        setTimeout(() => {
+            clearCallProgress();
+            updateSystemStatus('System Ready', 'ready');
+        }, 3000);
     });
     
     socket.on('call-not-accepted', (data) => {
         updateSystemStatus('Call not accepted', 'rejected');
         addCallStep('❌ Call declined', 'Recipient did not accept the call', 'complete');
-        setTimeout(() => clearCallProgress(), 5000);
+        setTimeout(() => {
+            clearCallProgress();
+            updateSystemStatus('System Ready', 'ready');
+        }, 5000);
     });
     
     socket.on('dial-completed', (data) => {
         updateSystemStatus(`Call ended (${data.status})`, 'ready');
         const statusMessage = data.duration ? `Duration: ${data.duration} seconds` : 'Call ended';
         addCallStep('📞 Call completed', statusMessage, 'complete');
-        setTimeout(() => clearCallProgress(), 5000);
+        setTimeout(() => {
+            clearCallProgress();
+            updateSystemStatus('System Ready', 'ready');
+        }, 5000);
     });
     
     // Contact management events
@@ -315,19 +339,28 @@ function initializeSocket() {
     socket.on('call-blacklisted', (data) => {
         updateSystemStatus(`Blacklisted caller: ${formatPhoneNumber(data.from)}`, 'rejected');
         addCallStep('🚫 Blacklisted caller', `TCPA compliance message sent - ${data.reason}`, 'complete');
-        setTimeout(() => clearCallProgress(), 5000);
+        setTimeout(() => {
+            clearCallProgress();
+            updateSystemStatus('System Ready', 'ready');
+        }, 5000);
     });
     
     socket.on('tcpa-removal-requested', (data) => {
         updateSystemStatus('TCPA removal requested', 'ready');
         addCallStep('📋 Removal requested', 'Caller requested Do Not Call removal', 'complete');
-        setTimeout(() => clearCallProgress(), 5000);
+        setTimeout(() => {
+            clearCallProgress();
+            updateSystemStatus('System Ready', 'ready');
+        }, 5000);
     });
     
     socket.on('tcpa-no-response', (data) => {
         updateSystemStatus('TCPA no response', 'rejected');
         addCallStep('❌ No TCPA response', 'Call terminated', 'complete');
-        setTimeout(() => clearCallProgress(), 5000);
+        setTimeout(() => {
+            clearCallProgress();
+            updateSystemStatus('System Ready', 'ready');
+        }, 5000);
     });
 }
 
