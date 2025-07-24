@@ -1,0 +1,23 @@
+CALL FORWARDING FLUTTER APP - LATEST VERSION TRACKER
+====================================================
+
+CURRENT LATEST VERSION: 1.2.5+12
+LAST APK: call-forwarding-app-v1.2.5+12-live-status-fix.apk
+BUILD DATE: July 24, 2025
+LOCATION: /home/michael5cents/Desktop/
+
+VERSION HISTORY (MOST RECENT FIRST):
+- v1.2.5+12: live-status-fix (July 24, 2025) ← LATEST
+- v1.2.4+11: dashboard-cleanup (July 23, 2025)
+- v1.2.3+10: credentials-save-fix (July 22, 2025)
+- v1.2.2+9: final-auth-fix (July 22, 2025) 
+- v1.2.1+8: auth-fixed (July 22, 2025)
+- v1.2.0+7: auth-configured (earlier)
+- v1.1.4+6: block-number (earlier)
+
+NEXT VERSION SHOULD BE: 1.2.6+13
+
+IMPORTANT: 
+- ALWAYS CHECK THIS FILE BEFORE CREATING NEW VERSIONS
+- UPDATE THIS FILE AFTER EVERY BUILD
+- CHECK DESKTOP APK FILES TO VERIFY LATEST VERSION
