@@ -6,7 +6,6 @@
 [![License](https://img.shields.io/badge/license-MIT-green.svg)](LICENSE)
 [![Twilio](https://img.shields.io/badge/Twilio-Powered-red.svg)](https://www.twilio.com/)
 [![Local LLM](https://img.shields.io/badge/Local%20LLM-Integrated-purple.svg)](https://github.com/ggerganov/llama.cpp)
-[![Flutter](https://img.shields.io/badge/Flutter-Mobile%20App-blue.svg)](https://flutter.dev/)
 
 ---
 
@@ -16,7 +15,7 @@ Transform your phone into an **intelligent communication hub** that automaticall
 
 **🔥 Key Highlights:**
 - **AI-Powered Screening**: Local Llama 3 AI analyzes caller intent and routes calls intelligently without recurring API costs
-- **Dual Interface**: Professional web dashboard + native Flutter mobile app
+- **Web Interface**: Professional web dashboard
 - **Real-Time Sync**: Instant updates across all devices via Socket.io
 - **Spam Protection**: TCPA-compliant blocking with legal compliance
 - **Enterprise Quality**: Production-ready with comprehensive logging and monitoring
@@ -39,8 +38,7 @@ Transform your phone into an **intelligent communication hub** that automaticall
 
 ### 📱 **Multi-Platform Access**
 - **Web Dashboard**: Professional interface with dark mode and modern UI
-- **Flutter Mobile App**: Native Android app optimized for Samsung Galaxy Z Fold 3
-- **Unified Backend**: Single Node.js server handles both web and mobile clients
+- **Backend**: Single Node.js server handles the web dashboard
 - **Offline Capability**: Local caching and background processing
 
 ### 🎵 **Advanced Voicemail System**
@@ -66,7 +64,6 @@ graph TB
     G -->|Spam| J[Polite Block]
     C --> K[Real-time Updates]
     K --> L[Web Dashboard]
-    K --> M[Flutter Mobile App]
     C --> N[SQLite Database]
 ```
 
@@ -79,7 +76,6 @@ graph TB
 | **AI Engine** | Local Llama 3 8B (llama.cpp) | Offline call intent analysis |
 | **Telephony** | Twilio API | Call handling & TwiML |
 | **Real-time** | Socket.io | Live updates |
-| **Mobile App** | Flutter 3.24.5 | Native Android interface |
 | **Web UI** | Modern JavaScript + CSS3 | Responsive dashboard |
 | **Authentication** | Smart bypass system | Secure yet accessible |
 
@@ -134,22 +130,6 @@ PORT=3001
 BASE_URL=https://your-domain.com
 ```
 
-### **Mobile App Setup**
-
-```bash
-# Navigate to Flutter app directory
-cd call-forwarding-flutter/call_forwarding_app
-
-# Install Flutter dependencies
-flutter pub get
-
-# Build APK for Android
-flutter build apk --release
-
-# Install on device
-flutter install
-```
-
 ---
 
 ## 📖 **How It Works**
@@ -164,7 +144,7 @@ flutter install
    - **Important Business**: Forward with AI summary
    - **Sales/Marketing**: Collect voicemail message
    - **Spam/Unwanted**: Polite rejection with compliance messaging
-5. **📱 Real-time Updates** → All interfaces updated instantly via Socket.io
+5. **📱 Real-time Updates** → Web dashboard updated instantly via Socket.io
 6. **💾 Logging** → Complete call record stored with AI summary
 
 ### **AI Decision Categories**
@@ -188,13 +168,6 @@ flutter install
 - **Block from Logs**: One-click spam blocking directly from call history
 - **Analytics Dashboard**: Statistics and call pattern analysis
 
-### **Flutter Mobile App**
-- **Native Performance**: Smooth 60fps UI with Material Design 3
-- **Background Monitoring**: Continues working when app is closed
-- **Samsung Z Fold Optimized**: Responsive design for foldable displays
-- **Audio Playback**: Local file caching for universal voicemail support
-- **Quick Actions**: Swipe gestures and contextual menus
-
 ---
 
 ## 🔐 **Security & Compliance**
@@ -203,7 +176,7 @@ flutter install
 - **Local Storage**: All sensitive data stored on-premise
 - **HTTPS Required**: Secure communications for external access
 - **Input Validation**: SQL injection protection with prepared statements
-- **Authentication**: Smart bypass system (web protected, mobile API open)
+- **Authentication**: Secure web protection
 
 ### **Legal Compliance**
 - **TCPA Compliant**: Legal Do Not Call compliance messaging
@@ -220,11 +193,9 @@ flutter install
 - **Concurrent Calls**: Handles multiple simultaneous incoming calls
 - **Memory Usage**: 100-200MB typical operation
 - **Database Performance**: Optimized SQLite queries with indexing
-- **Mobile App**: <3 second startup time, 60fps UI performance
 
 ### **Scalability Features**
 - **Real-time Efficiency**: Sub-second Socket.io event propagation
-- **Mobile Caching**: Local file storage for offline capability
 - **Network Optimization**: Efficient polling and data synchronization
 - **Database Optimization**: Indexed queries for fast lookups
 
@@ -289,17 +260,6 @@ docker run -d \
   call-forwarding-app
 ```
 
-### **Mobile App Distribution**
-
-```bash
-# Build release APK
-cd call-forwarding-flutter/call_forwarding_app
-flutter build apk --release --split-per-abi
-
-# APK located at:
-# build/app/outputs/flutter-apk/app-arm64-v8a-release.apk
-```
-
 ---
 
 ## 📝 **Configuration**
@@ -357,7 +317,6 @@ git checkout -b feature/amazing-feature
 
 # Make changes and test
 npm test
-flutter test
 
 # Commit using conventional commits
 git commit -m "feat: add amazing feature"
@@ -368,9 +327,8 @@ git push origin feature/amazing-feature
 
 ### **Code Standards**
 - **JavaScript**: ES6+ with async/await
-- **Flutter**: Dart with null safety
-- **Testing**: Jest for backend, Flutter test for mobile
-- **Linting**: ESLint + Prettier for JavaScript, dart format for Flutter
+- **Testing**: Jest for backend
+- **Linting**: ESLint + Prettier for JavaScript
 - **Documentation**: JSDoc comments for all functions
 
 ---
@@ -378,7 +336,6 @@ git push origin feature/amazing-feature
 ## 📚 **Documentation**
 
 - **[API Documentation](docs/API.md)** - Complete API reference
-- **[Flutter App Guide](docs/FLUTTER.md)** - Mobile app development
 - **[Deployment Guide](docs/DEPLOYMENT.md)** - Production setup
 - **[Troubleshooting](docs/TROUBLESHOOTING.md)** - Common issues and solutions
 - **[Changelog](CHANGELOG.md)** - Version history and updates
@@ -389,7 +346,6 @@ git push origin feature/amazing-feature
 
 ### **Technical Innovation**
 ✅ **AI-Powered Call Screening** - Revolutionary approach using a Local LLM for intelligent call management, ensuring offline privacy and eliminating API costs.
-✅ **Unified Architecture** - Single server efficiently handles both web and mobile clients  
 ✅ **Real-time Synchronization** - Socket.io ensures instant updates across all interfaces  
 ✅ **Universal Audio Playback** - Solved complex mobile audio streaming with local file caching  
 ✅ **TCPA Compliance** - Legal protection with proper spam blocking procedures  
@@ -410,7 +366,7 @@ This isn't just another call forwarding system. It represents a **paradigm shift
 
 - **🤖 AI Integration**: Uses a self-hosted Local LLM (Llama 3 8B) for intelligent, offline decision-making
 - **🏗️ Modern Architecture**: Built with current best practices and scalable design
-- **📱 Cross-Platform**: Native mobile app with web dashboard for complete control
+- **💻 Web Dashboard**: Professional web interface for complete control
 - **⚡ Real-Time**: Instant updates and monitoring across all interfaces
 - **🔒 Privacy-First**: Local storage with minimal external dependencies
 - **📈 Production-Ready**: Comprehensive logging, error handling, and monitoring
@@ -435,14 +391,13 @@ This project is licensed under the MIT License - see the [LICENSE](LICENSE) file
 
 - **[llama.cpp](https://github.com/ggerganov/llama.cpp)** - High-performance local LLM server
 - **[Twilio](https://www.twilio.com/)** - Telephony infrastructure and TwiML
-- **[Flutter](https://flutter.dev/)** - Mobile application framework
 - **[Socket.io](https://socket.io/)** - Real-time bidirectional communication
 
 ---
 
 <div align="center">
 
-**Built with ❤️ using Node.js, Flutter, Local LLMs, and Twilio**
+**Built with ❤️ using Node.js, Local LLMs, and Twilio**
 
 [⭐ Star this repo](https://github.com/michael5cents/CallForwardingApp) | [🐛 Report Bug](https://github.com/michael5cents/CallForwardingApp/issues) | [💡 Request Feature](https://github.com/michael5cents/CallForwardingApp/issues)
 
