@@ -1,4 +1,38 @@
 # Session Update Documentation
+
+**Date**: April 20, 2026  
+**Session Summary**: Local LLM Migration, System Health Monitoring, and Loan Spam Filter Implementation
+
+## Major Changes Completed (v2.4.0)
+
+### 1. Local LLM Migration ✅
+**Objective**: Transition from external AI (Claude/DeepSeek) to a self-hosted Llama 3 8B model for privacy, reliability, and no recurring API costs.
+**Key Improvements**:
+- Configured `llama.cpp` to run locally as an OpenAI-compatible server.
+- Updated `anthropic_helper.js` to use the `openai` Node SDK, pointing to the local `http://127.0.0.1:8080/v1` server.
+- Created `local-llm.service` to automatically run and manage the AI background process via `systemctl`.
+- Integrated `local-llm.service` into `manage-server.sh`.
+
+### 2. Loan Keyword Pre-Filter ✅
+**Objective**: Immediately reject loan-related spam before consuming AI processing resources.
+**Key Improvements**:
+- Intercepts caller speech in `server.js` and scans against a comprehensive list of loan-related keywords.
+- Auto-rejects calls matching phrases like "loan", "lending", "mortgage", "debt consolidation", etc., bypassing the AI step entirely.
+
+### 3. Comprehensive Health Monitoring ✅
+**Objective**: Ensure system stability and alert instantly if services or network go offline.
+**Key Improvements**:
+- Created `health-monitor.js` to periodically poll web app status and Local LLM status.
+- Configured `call-forwarding-monitor.timer` and `call-forwarding-monitor.service` to automate the process every 5 minutes.
+- Integrated Telegram bot alerts (`@call_forwarding_alert_bot`) to send notifications on system failure.
+
+### 4. Storage Cost Management ✅
+**Objective**: Automatically clean up Twilio recordings to prevent storage billing buildup.
+**Key Improvements**:
+- Updated `database.js` endpoints (`DELETE /api/call-logs/:id` and `DELETE /api/call-logs`) to fetch and delete actual `RecordingSid` assets from Twilio's cloud simultaneously with database cleanup.
+
+---
+
 **Date**: July 23, 2025  
 **Session Summary**: PWA Removal, UI Enhancements, and Dark Mode Implementation
 

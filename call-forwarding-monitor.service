@@ -1,0 +1,11 @@
+[Unit]
+Description=Call Forwarding Health Check
+After=network.target
+
+[Service]
+Type=oneshot
+User=michael5cents
+WorkingDirectory=/home/michael5cents/call-forwarding-app
+ExecStart=/usr/bin/node health-monitor.js
+StandardOutput=journal
+StandardError=journal

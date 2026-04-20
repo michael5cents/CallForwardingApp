@@ -11,13 +11,14 @@ case "$1" in
     start)
         echo "🚀 Starting Call Forwarding Server..."
         cd "$SERVER_DIR"
-        if pgrep -f "node server.js" > /dev/null; then
+        if systemctl is-active --quiet call-forwarding.service; then
             echo "⚠️  Server is already running"
             exit 1
         fi
-        npm start &
+        echo '5904' | sudo -S systemctl start call-forwarding.service
+        echo '5904' | sudo -S systemctl start local-llm.service
         sleep 3
-        if pgrep -f "node server.js" > /dev/null; then
+        if systemctl is-active --quiet call-forwarding.service; then
             echo "✅ Server started successfully!"
             echo "🌐 Web Dashboard: $WEB_URL"
             echo "🔐 Login: michael5cents / 5904"
@@ -29,10 +30,10 @@ case "$1" in
     
     stop)
         echo "🛑 Stopping Call Forwarding Server..."
-        if pgrep -f "node server.js" > /dev/null; then
-            pkill -f "node server.js"
+        if systemctl is-active --quiet call-forwarding.service; then
+            echo '5904' | sudo -S systemctl stop call-forwarding.service
             sleep 2
-            if ! pgrep -f "node server.js" > /dev/null; then
+            if ! systemctl is-active --quiet call-forwarding.service; then
                 echo "✅ Server stopped successfully!"
             else
                 echo "❌ Failed to stop server"
@@ -53,13 +54,19 @@ case "$1" in
     status)
         echo "📊 Call Forwarding Server Status:"
         echo "================================"
-        if pgrep -f "node server.js" > /dev/null; then
+        if systemctl is-active --quiet call-forwarding.service; then
             echo "Status: ✅ RUNNING"
-            echo "Process: $(ps aux | grep 'node server.js' | grep -v grep | awk '{print $2}')"
-            echo "Memory: $(ps aux | grep 'node server.js' | grep -v grep | awk '{print $6}') KB"
+            echo "Process: $(systemctl status call-forwarding.service | grep 'Main PID' | awk '{print $3}')"
             echo "Web: $WEB_URL (Login: michael5cents/5904)"
         else
             echo "Status: ❌ NOT RUNNING"
+        fi
+        echo ""
+        echo "🤖 Local AI Status:"
+        if systemctl is-active --quiet local-llm.service; then
+            echo "Service: ✅ RUNNING (port 8080)"
+        else
+            echo "Service: ❌ NOT RUNNING"
         fi
         echo ""
         echo "Auto-startup service:"

@@ -181,24 +181,52 @@ const getCallLogs = (limit = 50) => {
 
 const deleteCallLog = (id) => {
   return new Promise((resolve, reject) => {
-    db.run('DELETE FROM call_logs WHERE id = ?', [id], function(err) {
+    // First get the recording URL if it exists
+    db.get('SELECT recording_url FROM call_logs WHERE id = ?', [id], (err, row) => {
       if (err) {
         reject(err);
-      } else {
-        resolve({ changes: this.changes });
+        return;
       }
+      
+      const recordingUrl = row ? row.recording_url : null;
+      
+      // Now delete the call log
+      db.run('DELETE FROM call_logs WHERE id = ?', [id], function(err) {
+        if (err) {
+          reject(err);
+        } else {
+          resolve({ 
+            changes: this.changes,
+            recordingUrl: recordingUrl 
+          });
+        }
+      });
     });
   });
 };
 
 const clearAllCallLogs = () => {
   return new Promise((resolve, reject) => {
-    db.run('DELETE FROM call_logs', function(err) {
+    // First get all recording URLs before deleting
+    db.all('SELECT recording_url FROM call_logs WHERE recording_url IS NOT NULL', (err, rows) => {
       if (err) {
         reject(err);
-      } else {
-        resolve({ changes: this.changes });
+        return;
       }
+      
+      const recordingUrls = rows.map(row => row.recording_url);
+      
+      // Now delete all call logs
+      db.run('DELETE FROM call_logs', function(err) {
+        if (err) {
+          reject(err);
+        } else {
+          resolve({ 
+            changes: this.changes,
+            recordingUrls: recordingUrls 
+          });
+        }
+      });
     });
   });
 };

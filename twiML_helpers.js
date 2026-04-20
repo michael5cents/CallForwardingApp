@@ -40,11 +40,11 @@ const generateAIGreetingTwiML = () => {
     language: 'en-US'
   }, 'Hello. What can I help you with today?');
   
-  // Gather speech input 
+  // Gather speech input (reduced timeout from 10 to 5 seconds to save costs)
   response.gather({
     input: 'speech',
     speechTimeout: 'auto',
-    timeout: 10,
+    timeout: 5,
     action: '/handle-gather',
     method: 'POST'
   });
@@ -101,11 +101,11 @@ const generateVoicemailTwiML = () => {
     language: 'en-US'
   }, 'Please leave a message after the tone. Press pound when finished.');
   
-  // Record the message with explicit settings
+  // Record the message with explicit settings (reduced from 60 to 30 seconds to save costs)
   response.record({
     action: '/handle-recording',
     method: 'POST',
-    maxLength: 60,
+    maxLength: 30,
     finishOnKey: '#',
     playBeep: true,
     trim: 'trim-silence'

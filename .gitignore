@@ -86,3 +86,15 @@ Thumbs.db
 # Temporary files
 *.tmp
 *.temp
+
+# State files
+*.state.json
+.health-monitor-state.json
+
+# Backups
+*.backup.*
+*.backup
+recent_diff.txt
+
+# Large files
+local-llm/

@@ -2,20 +2,20 @@
 
 **Intelligent call screening and management with Claude AI integration**
 
-[![Version](https://img.shields.io/badge/version-2.2-blue.svg)](https://github.com/michael5cents/CallForwardingApp)
+[![Version](https://img.shields.io/badge/version-2.4.0-blue.svg)](https://github.com/michael5cents/CallForwardingApp)
 [![License](https://img.shields.io/badge/license-MIT-green.svg)](LICENSE)
 [![Twilio](https://img.shields.io/badge/Twilio-Powered-red.svg)](https://www.twilio.com/)
-[![Claude AI](https://img.shields.io/badge/Claude%20AI-Integrated-purple.svg)](https://www.anthropic.com/)
+[![Local LLM](https://img.shields.io/badge/Local%20LLM-Integrated-purple.svg)](https://github.com/ggerganov/llama.cpp)
 [![Flutter](https://img.shields.io/badge/Flutter-Mobile%20App-blue.svg)](https://flutter.dev/)
 
 ---
 
 ## 📱 **Overview**
 
-Transform your phone into an **intelligent communication hub** that automatically screens calls using Claude AI, blocks spam, prioritizes important contacts, and provides real-time monitoring through both web and mobile interfaces.
+Transform your phone into an **intelligent communication hub** that automatically screens calls using a Local LLM (Llama 3 8B), blocks spam, prioritizes important contacts, and provides real-time monitoring through both web and mobile interfaces.
 
 **🔥 Key Highlights:**
-- **AI-Powered Screening**: Claude AI analyzes caller intent and routes calls intelligently
+- **AI-Powered Screening**: Local Llama 3 AI analyzes caller intent and routes calls intelligently without recurring API costs
 - **Dual Interface**: Professional web dashboard + native Flutter mobile app
 - **Real-Time Sync**: Instant updates across all devices via Socket.io
 - **Spam Protection**: TCPA-compliant blocking with legal compliance
@@ -26,7 +26,7 @@ Transform your phone into an **intelligent communication hub** that automaticall
 ## ✨ **Features**
 
 ### 🧠 **Intelligent Call Management**
-- **Claude AI Integration**: Advanced natural language processing for caller intent analysis
+- **Local LLM Integration**: Advanced offline natural language processing for caller intent analysis (Llama 3 8B via llama.cpp)
 - **Smart Routing**: Automatically forward important calls, send sales to voicemail, block spam
 - **Contact Whitelisting**: Trusted contacts get direct forwarding with personalized messages
 - **TCPA-Compliant Blocking**: Legal spam protection with proper opt-out mechanisms
@@ -59,7 +59,7 @@ graph TB
     B --> C[Node.js Server]
     C --> D{Contact Check}
     D -->|Known| E[Direct Forward]
-    D -->|Unknown| F[Claude AI Analysis]
+    D -->|Unknown| F[Local LLM Analysis]
     F --> G{AI Decision}
     G -->|Important| H[Forward with Summary]
     G -->|Sales| I[Voicemail Collection]
@@ -76,7 +76,7 @@ graph TB
 |-----------|------------|---------|
 | **Backend** | Node.js + Express | Core server and API |
 | **Database** | SQLite3 | Local data storage |
-| **AI Engine** | Anthropic Claude (Haiku) | Call intent analysis |
+| **AI Engine** | Local Llama 3 8B (llama.cpp) | Offline call intent analysis |
 | **Telephony** | Twilio API | Call handling & TwiML |
 | **Real-time** | Socket.io | Live updates |
 | **Mobile App** | Flutter 3.24.5 | Native Android interface |
@@ -90,7 +90,7 @@ graph TB
 ### **Prerequisites**
 - Node.js 16+ installed
 - Twilio account with phone number
-- Anthropic Claude API key
+- Llama 3 8B GGUF Model & llama.cpp
 - SQLite3
 
 ### **Installation**
@@ -122,8 +122,9 @@ TWILIO_ACCOUNT_SID=your_twilio_account_sid
 TWILIO_AUTH_TOKEN=your_twilio_auth_token  
 TWILIO_PHONE_NUMBER=your_twilio_phone_number
 
-# Anthropic Claude API
-ANTHROPIC_API_KEY=your_anthropic_api_key
+# Local LLM API (OpenAI Compatible)
+# Connects to locally hosted llama.cpp server
+OPENAI_API_BASE=http://127.0.0.1:8080/v1
 
 # Personal Configuration
 MY_PERSONAL_NUMBER=your_personal_phone_number
@@ -157,7 +158,7 @@ flutter install
 
 1. **📞 Incoming Call** → Twilio receives the call and triggers webhook
 2. **🔍 Contact Check** → System queries database for known contacts
-3. **🤖 AI Analysis** → If unknown, Claude AI analyzes caller intent and context
+3. **🤖 AI Analysis** → If unknown, the Local LLM analyzes caller intent and context
 4. **🎯 Smart Routing** → Decision made based on AI analysis:
    - **Trusted Contacts**: Direct forward with personalized greeting
    - **Important Business**: Forward with AI summary
@@ -323,7 +324,7 @@ Edit `config/routing-rules.json` to customize AI decision logic:
 
 ### **AI Prompts**
 
-Customize Claude AI analysis in `config/ai-prompts.js`:
+Customize Local LLM analysis in `anthropic_helper.js`:
 
 ```javascript
 export const CALL_ANALYSIS_PROMPT = `
@@ -387,7 +388,7 @@ git push origin feature/amazing-feature
 ## 🏆 **Key Achievements**
 
 ### **Technical Innovation**
-✅ **AI-Powered Call Screening** - Revolutionary approach using Claude AI for intelligent call management  
+✅ **AI-Powered Call Screening** - Revolutionary approach using a Local LLM for intelligent call management, ensuring offline privacy and eliminating API costs.
 ✅ **Unified Architecture** - Single server efficiently handles both web and mobile clients  
 ✅ **Real-time Synchronization** - Socket.io ensures instant updates across all interfaces  
 ✅ **Universal Audio Playback** - Solved complex mobile audio streaming with local file caching  
@@ -407,7 +408,7 @@ git push origin feature/amazing-feature
 
 This isn't just another call forwarding system. It represents a **paradigm shift** in personal communication management:
 
-- **🤖 AI Integration**: Uses cutting-edge Claude AI for intelligent decision-making
+- **🤖 AI Integration**: Uses a self-hosted Local LLM (Llama 3 8B) for intelligent, offline decision-making
 - **🏗️ Modern Architecture**: Built with current best practices and scalable design
 - **📱 Cross-Platform**: Native mobile app with web dashboard for complete control
 - **⚡ Real-Time**: Instant updates and monitoring across all interfaces
@@ -432,7 +433,7 @@ This project is licensed under the MIT License - see the [LICENSE](LICENSE) file
 
 ## 🙏 **Acknowledgments**
 
-- **[Anthropic](https://www.anthropic.com/)** - Claude AI for intelligent call analysis
+- **[llama.cpp](https://github.com/ggerganov/llama.cpp)** - High-performance local LLM server
 - **[Twilio](https://www.twilio.com/)** - Telephony infrastructure and TwiML
 - **[Flutter](https://flutter.dev/)** - Mobile application framework
 - **[Socket.io](https://socket.io/)** - Real-time bidirectional communication
@@ -441,7 +442,7 @@ This project is licensed under the MIT License - see the [LICENSE](LICENSE) file
 
 <div align="center">
 
-**Built with ❤️ using Node.js, Flutter, Claude AI, and Twilio**
+**Built with ❤️ using Node.js, Flutter, Local LLMs, and Twilio**
 
 [⭐ Star this repo](https://github.com/michael5cents/CallForwardingApp) | [🐛 Report Bug](https://github.com/michael5cents/CallForwardingApp/issues) | [💡 Request Feature](https://github.com/michael5cents/CallForwardingApp/issues)
 

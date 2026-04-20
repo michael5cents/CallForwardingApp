@@ -1,0 +1,14 @@
+[Unit]
+Description=Local LLM API Server (llama.cpp)
+After=network.target
+
+[Service]
+Environment="LD_LIBRARY_PATH=/home/michael5cents/call-forwarding-app/local-llm/llama-b8857"
+ExecStart=/home/michael5cents/call-forwarding-app/local-llm/llama-b8857/llama-server -m /home/michael5cents/call-forwarding-app/local-llm/model.gguf -c 2048 --port 8080 --host 127.0.0.1 -np 4
+WorkingDirectory=/home/michael5cents/call-forwarding-app/local-llm
+Restart=always
+User=michael5cents
+Group=michael5cents
+
+[Install]
+WantedBy=multi-user.target

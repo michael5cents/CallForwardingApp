@@ -1,7 +1,7 @@
 {
   "name": "call-forwarding-app",
-  "version": "1.0.0",
-  "description": "Personal Call Forwarding App with AI Gatekeeper using Twilio and Claude",
+  "version": "2.4.0",
+  "description": "Personal Call Forwarding App with AI Gatekeeper using Twilio and Local LLM",
   "main": "server.js",
   "scripts": {
     "start": "node server.js",
@@ -25,6 +25,7 @@
     "express-rate-limit": "^8.0.1",
     "express-session": "^1.18.2",
     "helmet": "^8.1.0",
+    "openai": "^6.34.0",
     "socket.io": "^4.7.4",
     "sqlite3": "^5.1.6",
     "twilio": "^4.19.0"

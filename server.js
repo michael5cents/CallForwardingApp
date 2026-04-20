@@ -1,4 +1,5 @@
 require('dotenv').config();
+const os = require('os');
 const express = require('express');
 const path = require('path');
 const http = require('http');
@@ -28,7 +29,7 @@ app.use(session({
   secret: process.env.SESSION_SECRET || 'call-forwarding-secret-key-2025',
   resave: false,
   saveUninitialized: false,
-  cookie: { 
+  cookie: {
     secure: false, // Set to true if using HTTPS
     maxAge: 24 * 60 * 60 * 1000 // 24 hours
   }
@@ -39,7 +40,7 @@ app.use((req, res, next) => {
   res.header('Access-Control-Allow-Origin', '*');
   res.header('Access-Control-Allow-Methods', 'GET, POST, PUT, DELETE, OPTIONS');
   res.header('Access-Control-Allow-Headers', 'Content-Type, Authorization, User-Agent, Accept, Host, X-API-Key');
-  
+
   if (req.method === 'OPTIONS') {
     res.sendStatus(200);
   } else {
@@ -50,7 +51,7 @@ app.use((req, res, next) => {
 // Authentication routes
 app.post('/login', (req, res) => {
   const { username, password } = req.body;
-  
+
   if (auth.verifyWebCredentials(username, password)) {
     req.session.authenticated = true;
     req.session.token = auth.generateSessionToken();
@@ -152,13 +153,13 @@ database.initializeDatabase()
 // Socket.IO connection handling - SIMPLIFIED
 io.on('connection', (socket) => {
   console.log('Dashboard connected');
-  
+
   // Send immediate test event to verify connection
   socket.emit('connection-test', {
     message: 'Connection established successfully',
     timestamp: new Date().toISOString()
   });
-  
+
   socket.on('disconnect', () => {
     console.log('Dashboard disconnected');
   });
@@ -169,9 +170,9 @@ app.post('/voice', async (req, res) => {
   try {
     const fromNumber = req.body.From;
     const callSid = req.body.CallSid;
-    
+
     console.log(`Incoming call from ${fromNumber}, CallSid: ${callSid}`);
-    
+
     // Emit real-time call event
     io.emit('call-incoming', {
       from: fromNumber,
@@ -179,14 +180,14 @@ app.post('/voice', async (req, res) => {
       timestamp: new Date().toISOString(),
       status: 'incoming'
     });
-    
+
     // First check if caller is blacklisted
     const blacklistEntry = await database.getBlacklistByPhoneNumber(fromNumber);
-    
+
     if (blacklistEntry) {
       // Path C: Blacklisted caller - send TCPA compliance message
       console.log(`Blacklisted caller detected: ${fromNumber}, reason: ${blacklistEntry.reason}`);
-      
+
       // Emit blacklisted event
       io.emit('call-blacklisted', {
         from: fromNumber,
@@ -194,25 +195,25 @@ app.post('/voice', async (req, res) => {
         reason: blacklistEntry.reason,
         timestamp: new Date().toISOString()
       });
-      
+
       // Log the call as blacklisted
       await database.logCall(fromNumber, 'Blacklisted', `TCPA compliance message sent - ${blacklistEntry.reason}`);
-      
+
       // Generate TwiML for TCPA compliance message
       const twiML = twiMLHelpers.generateTCPAComplianceTwiML();
-      
+
       res.set('Content-Type', 'text/xml');
       res.send(twiML);
       return;
     }
-    
+
     // Check if caller is in contacts (whitelist)
     const contact = await database.getContactByPhoneNumber(fromNumber);
-    
+
     if (contact) {
       // Path A: Contact exists - direct forwarding
       console.log(`Whitelisted contact found: ${contact.name}`);
-      
+
       // Emit whitelisted event
       io.emit('call-whitelisted', {
         from: fromNumber,
@@ -220,23 +221,23 @@ app.post('/voice', async (req, res) => {
         contactName: contact.name,
         timestamp: new Date().toISOString()
       });
-      
+
       // Log the call
       await database.logCall(fromNumber, 'Whitelisted', `Direct call from ${contact.name}`);
-      
+
       // Generate TwiML for direct forwarding
       const twiML = twiMLHelpers.generateDirectForwardingTwiML(
-        contact.name, 
+        contact.name,
         process.env.MY_PERSONAL_NUMBER
       );
-      
+
       res.set('Content-Type', 'text/xml');
       res.send(twiML);
-      
+
     } else {
       // Path B: Unknown contact - AI gatekeeper
       console.log('Unknown contact - engaging AI gatekeeper');
-      
+
       // Emit screening event
       io.emit('call-screening', {
         from: fromNumber,
@@ -244,26 +245,26 @@ app.post('/voice', async (req, res) => {
         timestamp: new Date().toISOString(),
         status: 'AI screening engaged'
       });
-      
+
       // Log the call as screening
       await database.logCall(fromNumber, 'Screening', 'AI gatekeeper engaged');
-      
+
       // Generate TwiML for AI greeting
       const twiML = twiMLHelpers.generateAIGreetingTwiML();
-      
+
       res.set('Content-Type', 'text/xml');
       res.send(twiML);
     }
-    
+
   } catch (error) {
     console.error('Error in /voice webhook:', error);
-    
+
     // Emit error event
     io.emit('call-error', {
       error: error.message,
       timestamp: new Date().toISOString()
     });
-    
+
     // Fallback TwiML
     const twiML = twiMLHelpers.generateRejectionTwiML();
     res.set('Content-Type', 'text/xml');
@@ -277,9 +278,9 @@ app.post('/handle-gather', async (req, res) => {
     const fromNumber = req.body.From;
     const speechResult = req.body.SpeechResult;
     const callSid = req.body.CallSid;
-    
+
     console.log(`Speech result from ${fromNumber}: ${speechResult}`);
-    
+
     // Emit speech analysis event
     io.emit('call-speech-received', {
       from: fromNumber,
@@ -287,7 +288,7 @@ app.post('/handle-gather', async (req, res) => {
       speech: speechResult,
       timestamp: new Date().toISOString()
     });
-    
+
     if (!speechResult) {
       // No speech detected
       io.emit('call-no-speech', {
@@ -295,13 +296,48 @@ app.post('/handle-gather', async (req, res) => {
         callSid: callSid,
         timestamp: new Date().toISOString()
       });
-      
+
       const twiML = twiMLHelpers.generateRejectionTwiML();
       res.set('Content-Type', 'text/xml');
       res.send(twiML);
       return;
     }
-    
+
+    // LOAN KEYWORD FILTER - Immediately reject calls mentioning loan-related terms
+    const loanKeywords = [
+      'loan', 'loans', 'lending', 'lender', 'lenders',
+      'mortgage', 'mortgages', 'refinance', 'refinancing',
+      'debt consolidation', 'credit line', 'line of credit',
+      'payday loan', 'cash advance', 'personal loan',
+      'home equity', 'heloc', 'auto loan', 'car loan',
+      'student loan', 'business loan', 'sba loan'
+    ];
+
+    const speechLower = speechResult.toLowerCase();
+    const detectedLoanKeyword = loanKeywords.find(keyword => speechLower.includes(keyword));
+
+    if (detectedLoanKeyword) {
+      console.log(`LOAN FILTER: Detected keyword "${detectedLoanKeyword}" in speech from ${fromNumber}`);
+
+      // Emit loan filter event
+      io.emit('call-loan-filtered', {
+        from: fromNumber,
+        callSid: callSid,
+        detectedKeyword: detectedLoanKeyword,
+        speech: speechResult,
+        timestamp: new Date().toISOString()
+      });
+
+      // Log the filtered call
+      await database.logCall(fromNumber, 'Rejected', `Loan filter: detected "${detectedLoanKeyword}"`);
+
+      // Reject the call
+      const twiML = twiMLHelpers.generateRejectionTwiML();
+      res.set('Content-Type', 'text/xml');
+      res.send(twiML);
+      return;
+    }
+
     // Emit AI analysis start
     io.emit('ai-analysis-start', {
       from: fromNumber,
@@ -309,12 +345,12 @@ app.post('/handle-gather', async (req, res) => {
       speech: speechResult,
       timestamp: new Date().toISOString()
     });
-    
+
     // Analyze the speech with Claude AI
     const analysis = await anthropicHelper.analyzeCallerMessage(speechResult);
-    
+
     console.log(`AI Analysis - Category: ${analysis.category}, Summary: ${analysis.summary}`);
-    
+
     // Emit AI analysis result
     io.emit('ai-analysis-complete', {
       from: fromNumber,
@@ -323,11 +359,11 @@ app.post('/handle-gather', async (req, res) => {
       summary: analysis.summary,
       timestamp: new Date().toISOString()
     });
-    
+
     // Route based on AI analysis
     let twiML;
     let logStatus;
-    
+
     switch (analysis.category) {
       case 'Urgent':
       case 'Sales':
@@ -340,14 +376,14 @@ app.post('/handle-gather', async (req, res) => {
           forwardTo: process.env.MY_PERSONAL_NUMBER,
           timestamp: new Date().toISOString()
         });
-        
+
         twiML = twiMLHelpers.generateScreenedForwardingTwiML(
           analysis.summary,
           process.env.MY_PERSONAL_NUMBER
         );
         logStatus = 'Forwarded';
         break;
-        
+
       case 'Support':
       case 'Personal':
         // Send to voicemail
@@ -358,11 +394,11 @@ app.post('/handle-gather', async (req, res) => {
           summary: analysis.summary,
           timestamp: new Date().toISOString()
         });
-        
+
         twiML = twiMLHelpers.generateVoicemailTwiML();
         logStatus = 'Voicemail';
         break;
-        
+
       case 'Spam':
       default:
         // Reject spam or unknown categories
@@ -373,27 +409,27 @@ app.post('/handle-gather', async (req, res) => {
           summary: analysis.summary,
           timestamp: new Date().toISOString()
         });
-        
+
         twiML = twiMLHelpers.generateRejectionTwiML();
         logStatus = 'Rejected';
         break;
     }
-    
+
     // Update call log with AI analysis (will be updated with recording URL later if voicemail)
     await database.logCall(fromNumber, logStatus, analysis.summary);
-    
+
     res.set('Content-Type', 'text/xml');
     res.send(twiML);
-    
+
   } catch (error) {
     console.error('Error in /handle-gather webhook:', error);
-    
+
     // Emit error event
     io.emit('call-error', {
       error: error.message,
       timestamp: new Date().toISOString()
     });
-    
+
     // Fallback to rejection
     const twiML = twiMLHelpers.generateRejectionTwiML();
     res.set('Content-Type', 'text/xml');
@@ -407,12 +443,15 @@ app.post('/handle-recording', async (req, res) => {
     const fromNumber = req.body.From;
     const recordingUrl = req.body.RecordingUrl;
     const callSid = req.body.CallSid;
-    
+    const recordingSid = req.body.RecordingSid;
+
     console.log(`Recording completed from ${fromNumber}: ${recordingUrl}`);
-    
+
     // Update the call log with the recording URL
     await database.updateCallLogWithRecording(fromNumber, recordingUrl);
-    
+
+    // Note: Old recordings are automatically cleaned up daily by cleanupOldRecordings()
+
     // Emit recording completion event
     io.emit('call-recording-complete', {
       from: fromNumber,
@@ -420,16 +459,16 @@ app.post('/handle-recording', async (req, res) => {
       recordingUrl: recordingUrl,
       timestamp: new Date().toISOString()
     });
-    
+
     // Generate completion TwiML
     const twiML = twiMLHelpers.generateRecordingCompleteTwiML();
-    
+
     res.set('Content-Type', 'text/xml');
     res.send(twiML);
-    
+
   } catch (error) {
     console.error('Error in /handle-recording webhook:', error);
-    
+
     const twiML = twiMLHelpers.generateRecordingCompleteTwiML();
     res.set('Content-Type', 'text/xml');
     res.send(twiML);
@@ -451,16 +490,16 @@ app.get('/api/contacts', async (req, res) => {
 app.post('/api/contacts', async (req, res) => {
   try {
     const { name, phone_number } = req.body;
-    
+
     if (!name || !phone_number) {
       return res.status(400).json({ error: 'Name and phone number are required' });
     }
-    
+
     const contact = await database.addContact(name, phone_number);
-    
+
     // Emit contact added event
     io.emit('contact-added', contact);
-    
+
     res.json(contact);
   } catch (error) {
     console.error('Error adding contact:', error);
@@ -477,14 +516,14 @@ app.delete('/api/contacts/:id', async (req, res) => {
   try {
     const { id } = req.params;
     const result = await database.deleteContact(id);
-    
+
     if (result.changes === 0) {
       return res.status(404).json({ error: 'Contact not found' });
     }
-    
+
     // Emit contact deleted event
     io.emit('contact-deleted', { id: parseInt(id) });
-    
+
     res.json({ message: 'Contact deleted successfully' });
   } catch (error) {
     console.error('Error deleting contact:', error);
@@ -508,14 +547,30 @@ app.delete('/api/call-logs/:id', async (req, res) => {
   try {
     const { id } = req.params;
     const result = await database.deleteCallLog(id);
-    
+
     if (result.changes === 0) {
       return res.status(404).json({ error: 'Call log not found' });
     }
-    
+
+    // Delete recording from Twilio if it exists
+    if (result.recordingUrl) {
+      try {
+        // Extract recording SID from URL
+        const match = result.recordingUrl.match(/\/Recordings\/([A-Za-z0-9]+)/);
+        if (match && match[1]) {
+          const recordingSid = match[1];
+          const twilioClient = require('twilio')(process.env.TWILIO_ACCOUNT_SID, process.env.TWILIO_AUTH_TOKEN);
+          await twilioClient.recordings(recordingSid).remove();
+          console.log(`Deleted Twilio recording: ${recordingSid}`);
+        }
+      } catch (err) {
+        console.error(`Failed to delete recording: ${err.message}`);
+      }
+    }
+
     // Emit call log deleted event
     io.emit('call-log-deleted', { id: parseInt(id) });
-    
+
     res.json({ message: 'Call log deleted successfully' });
   } catch (error) {
     console.error('Error deleting call log:', error);
@@ -527,11 +582,35 @@ app.delete('/api/call-logs/:id', async (req, res) => {
 app.delete('/api/call-logs', async (req, res) => {
   try {
     const result = await database.clearAllCallLogs();
-    
+
+    // Delete recordings from Twilio to save costs
+    let deletedRecordings = 0;
+    if (result.recordingUrls && result.recordingUrls.length > 0) {
+      const twilioClient = require('twilio')(process.env.TWILIO_ACCOUNT_SID, process.env.TWILIO_AUTH_TOKEN);
+
+      for (const url of result.recordingUrls) {
+        try {
+          // Extract recording SID from URL
+          // URL format: https://api.twilio.com/2010-04-01/Accounts/AC.../Recordings/RE...
+          const match = url.match(/\/Recordings\/([A-Za-z0-9]+)/);
+          if (match && match[1]) {
+            const recordingSid = match[1];
+            await twilioClient.recordings(recordingSid).remove();
+            deletedRecordings++;
+            console.log(`Deleted Twilio recording: ${recordingSid}`);
+          }
+        } catch (err) {
+          console.error(`Failed to delete recording from URL ${url}:`, err.message);
+        }
+      }
+    }
+
     // Emit all call logs cleared event
     io.emit('call-logs-cleared');
-    
-    res.json({ message: `Deleted ${result.changes} call logs` });
+
+    res.json({
+      message: `Deleted ${result.changes} call logs and ${deletedRecordings} recordings from Twilio`
+    });
   } catch (error) {
     console.error('Error clearing call logs:', error);
     res.status(500).json({ error: 'Failed to clear call logs' });
@@ -555,16 +634,16 @@ app.get('/api/blacklist', async (req, res) => {
 app.post('/api/blacklist', async (req, res) => {
   try {
     const { phone_number, reason, pattern_type } = req.body;
-    
+
     if (!phone_number) {
       return res.status(400).json({ error: 'Phone number is required' });
     }
-    
+
     const entry = await database.addToBlacklist(phone_number, reason, pattern_type);
-    
+
     // Emit blacklist added event
     io.emit('blacklist-added', entry);
-    
+
     res.json(entry);
   } catch (error) {
     console.error('Error adding to blacklist:', error);
@@ -581,14 +660,14 @@ app.delete('/api/blacklist/:id', async (req, res) => {
   try {
     const { id } = req.params;
     const result = await database.removeFromBlacklist(id);
-    
+
     if (result.changes === 0) {
       return res.status(404).json({ error: 'Blacklist entry not found' });
     }
-    
+
     // Emit blacklist removed event
     io.emit('blacklist-removed', { id: parseInt(id) });
-    
+
     res.json({ message: 'Number removed from blacklist successfully' });
   } catch (error) {
     console.error('Error removing from blacklist:', error);
@@ -600,10 +679,10 @@ app.delete('/api/blacklist/:id', async (req, res) => {
 app.delete('/api/blacklist', async (req, res) => {
   try {
     const result = await database.clearAllBlacklist();
-    
+
     // Emit all blacklist cleared event
     io.emit('blacklist-cleared');
-    
+
     res.json({ message: `Deleted ${result.changes} blacklist entries` });
   } catch (error) {
     console.error('Error clearing blacklist:', error);
@@ -632,7 +711,7 @@ app.get('/api/sync', async (req, res) => {
     const contacts = await database.getAllContacts();
     const callLogs = await database.getCallLogs();
     const blacklist = await database.getAllBlacklistEntries();
-    
+
     res.json({
       timestamp: Date.now(),
       contacts: contacts || [],
@@ -658,13 +737,13 @@ app.get('/api/updates', async (req, res) => {
   try {
     const since = parseInt(req.query.since) || 0;
     const now = Date.now();
-    
+
     // For initial load, send all data
     if (since === 0) {
       const contacts = await database.getAllContacts();
       const callLogs = await database.getCallLogs();
       const blacklist = await database.getAllBlacklistEntries();
-      
+
       res.json({
         timestamp: now,
         newCalls: [],
@@ -705,18 +784,18 @@ app.get('/api/updates', async (req, res) => {
 app.post('/generate-whisper', (req, res) => {
   try {
     const contactName = req.query.contactName || req.body.contactName;
-    
+
     console.log(`Generating whisper for contact: ${contactName || 'unknown'}`);
-    
+
     // Generate whisper TwiML
     const twiML = twiMLHelpers.generateWhisperTwiML(contactName);
-    
+
     res.set('Content-Type', 'text/xml');
     res.send(twiML);
-    
+
   } catch (error) {
     console.error('Error generating whisper:', error);
-    
+
     // Fallback whisper
     const twiML = twiMLHelpers.generateWhisperTwiML();
     res.set('Content-Type', 'text/xml');
@@ -728,18 +807,18 @@ app.post('/generate-whisper', (req, res) => {
 app.post('/generate-screened-whisper', (req, res) => {
   try {
     const summary = req.query.summary || req.body.summary;
-    
+
     console.log(`Generating screened whisper for: ${summary || 'unknown purpose'}`);
-    
+
     // Generate screened whisper TwiML
     const twiML = twiMLHelpers.generateScreenedWhisperTwiML(summary);
-    
+
     res.set('Content-Type', 'text/xml');
     res.send(twiML);
-    
+
   } catch (error) {
     console.error('Error generating screened whisper:', error);
-    
+
     // Fallback whisper
     const twiML = twiMLHelpers.generateScreenedWhisperTwiML();
     res.set('Content-Type', 'text/xml');
@@ -752,44 +831,44 @@ app.post('/handle-call-acceptance', (req, res) => {
   try {
     const fromNumber = req.body.From;
     const digits = req.body.Digits;
-    
+
     console.log(`Call acceptance response from ${fromNumber}: ${digits || 'no key pressed'}`);
-    
+
     if (digits) {
       // Key was pressed - accept the call
       console.log('Call accepted by recipient');
-      
+
       // Emit call acceptance event
       io.emit('call-accepted', {
         from: fromNumber,
         timestamp: new Date().toISOString()
       });
-      
+
       // Generate acceptance TwiML (connects the call)
       const twiML = twiMLHelpers.generateCallAcceptanceTwiML();
-      
+
       res.set('Content-Type', 'text/xml');
       res.send(twiML);
-      
+
     } else {
       // No key pressed - reject the call
       console.log('Call not accepted by recipient');
-      
+
       // Emit call rejection event
       io.emit('call-not-accepted', {
         from: fromNumber,
         timestamp: new Date().toISOString()
       });
-      
+
       // Hang up
       const twiML = twiMLHelpers.generateRejectionTwiML();
       res.set('Content-Type', 'text/xml');
       res.send(twiML);
     }
-    
+
   } catch (error) {
     console.error('Error handling call acceptance:', error);
-    
+
     // Fallback - reject call
     const twiML = twiMLHelpers.generateRejectionTwiML();
     res.set('Content-Type', 'text/xml');
@@ -803,9 +882,9 @@ app.post('/handle-dial-status', (req, res) => {
     const fromNumber = req.body.From;
     const dialStatus = req.body.DialStatus;
     const callDuration = req.body.CallDuration;
-    
+
     console.log(`Dial completed from ${fromNumber}: status=${dialStatus}, duration=${callDuration}`);
-    
+
     // Emit dial completion event
     io.emit('dial-completed', {
       from: fromNumber,
@@ -813,16 +892,16 @@ app.post('/handle-dial-status', (req, res) => {
       duration: callDuration,
       timestamp: new Date().toISOString()
     });
-    
+
     // Generate dial status TwiML
     const twiML = twiMLHelpers.generateDialStatusTwiML();
-    
+
     res.set('Content-Type', 'text/xml');
     res.send(twiML);
-    
+
   } catch (error) {
     console.error('Error handling dial status:', error);
-    
+
     const twiML = twiMLHelpers.generateDialStatusTwiML();
     res.set('Content-Type', 'text/xml');
     res.send(twiML);
@@ -835,49 +914,49 @@ app.post('/handle-tcpa-response', async (req, res) => {
     const fromNumber = req.body.From;
     const digits = req.body.Digits;
     const callSid = req.body.CallSid;
-    
+
     console.log(`TCPA response from blacklisted number ${fromNumber}: ${digits || 'no response'}`);
-    
+
     if (digits === '1') {
       // Transfer to removal line
       console.log('Blacklisted caller requested removal line transfer');
-      
+
       // Emit TCPA removal request event
       io.emit('tcpa-removal-requested', {
         from: fromNumber,
         callSid: callSid,
         timestamp: new Date().toISOString()
       });
-      
+
       // Log the removal request
       await database.logCall(fromNumber, 'TCPA Removal', 'Caller requested removal line transfer');
-      
+
       // Generate removal line TwiML
       const twiML = twiMLHelpers.generateTCPARemovalTwiML();
-      
+
       res.set('Content-Type', 'text/xml');
       res.send(twiML);
-      
+
     } else {
       // No valid response - hang up
       console.log('No valid TCPA response from blacklisted caller');
-      
+
       // Emit TCPA no response event
       io.emit('tcpa-no-response', {
         from: fromNumber,
         callSid: callSid,
         timestamp: new Date().toISOString()
       });
-      
+
       // Hang up
       const twiML = twiMLHelpers.generateRejectionTwiML();
       res.set('Content-Type', 'text/xml');
       res.send(twiML);
     }
-    
+
   } catch (error) {
     console.error('Error handling TCPA response:', error);
-    
+
     // Fallback - hang up
     const twiML = twiMLHelpers.generateRejectionTwiML();
     res.set('Content-Type', 'text/xml');
@@ -889,35 +968,35 @@ app.post('/handle-tcpa-response', async (req, res) => {
 app.get('/recording/:recordingSid', async (req, res) => {
   try {
     const { recordingSid } = req.params;
-    
+
     // Initialize Twilio client
     const twilioClient = require('twilio')(process.env.TWILIO_ACCOUNT_SID, process.env.TWILIO_AUTH_TOKEN);
-    
+
     // Get the recording
     const recording = await twilioClient.recordings(recordingSid).fetch();
-    
+
     // Stream the recording file
     const recordingUrl = `https://api.twilio.com${recording.uri.replace('.json', '.wav')}`;
-    
+
     // Fetch the recording with Twilio auth
     const response = await fetch(recordingUrl, {
       headers: {
         'Authorization': 'Basic ' + Buffer.from(`${process.env.TWILIO_ACCOUNT_SID}:${process.env.TWILIO_AUTH_TOKEN}`).toString('base64')
       }
     });
-    
+
     if (!response.ok) {
       throw new Error(`Failed to fetch recording: ${response.status}`);
     }
-    
+
     // Set appropriate headers
     res.setHeader('Content-Type', 'audio/wav');
     res.setHeader('Content-Disposition', `inline; filename="recording-${recordingSid}.wav"`);
-    
+
     // Stream the audio data
     const buffer = await response.arrayBuffer();
     res.send(Buffer.from(buffer));
-    
+
   } catch (error) {
     console.error('Error fetching recording:', error);
     res.status(500).json({ error: 'Failed to fetch recording' });
@@ -928,13 +1007,13 @@ app.get('/recording/:recordingSid', async (req, res) => {
 app.get('/api/download-recording', async (req, res) => {
   try {
     const { url } = req.query;
-    
+
     if (!url) {
       return res.status(400).json({ error: 'Recording URL is required' });
     }
 
     console.log(`Downloading recording from Twilio: ${url}`);
-    
+
     // Convert JSON URL to WAV format if needed
     const audioUrl = url.replace('.json', '.wav');
     console.log(`Audio URL: ${audioUrl}`);
@@ -962,7 +1041,7 @@ app.get('/api/download-recording', async (req, res) => {
       res.setHeader('Content-Disposition', 'attachment; filename="recording.wav"');
       res.setHeader('Access-Control-Allow-Origin', '*');
       res.setHeader('Cache-Control', 'public, max-age=3600');
-      
+
       // Stream the response directly to client
       response.pipe(res);
     });
@@ -973,7 +1052,7 @@ app.get('/api/download-recording', async (req, res) => {
     });
 
     request.end();
-    
+
   } catch (error) {
     console.error('Error downloading recording:', error);
     res.status(500).json({ error: 'Failed to download recording', details: error.message });
@@ -985,11 +1064,70 @@ app.get('/', (req, res) => {
   res.sendFile(path.join(__dirname, 'public', 'index.html'));
 });
 
+// Clean up old recordings daily to reduce Twilio storage costs
+async function cleanupOldRecordings() {
+  try {
+    console.log('Starting cleanup of old recordings...');
+    const twilioClient = require('twilio')(process.env.TWILIO_ACCOUNT_SID, process.env.TWILIO_AUTH_TOKEN);
+
+    // Get all recordings
+    const recordings = await twilioClient.recordings.list();
+    const thirtyDaysAgo = new Date();
+    thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
+
+    let deletedCount = 0;
+    for (const recording of recordings) {
+      const recordingDate = new Date(recording.dateCreated);
+      if (recordingDate < thirtyDaysAgo) {
+        try {
+          await recording.remove();
+          deletedCount++;
+          console.log(`Deleted old recording from ${recording.dateCreated}`);
+        } catch (err) {
+          console.error(`Failed to delete recording ${recording.sid}:`, err.message);
+        }
+      }
+    }
+
+    console.log(`Cleanup complete. Deleted ${deletedCount} old recordings.`);
+  } catch (error) {
+    console.error('Error during recording cleanup:', error);
+  }
+}
+
+// Run cleanup daily at 2 AM
+setInterval(() => {
+  const now = new Date();
+  if (now.getHours() === 2 && now.getMinutes() === 0) {
+    cleanupOldRecordings();
+  }
+}, 60000); // Check every minute
+
+// Also run cleanup on startup
+setTimeout(cleanupOldRecordings, 10000); // Run 10 seconds after startup
+
+// Helper to get IP by MAC address
+function getIpByMac(targetMac) {
+  const interfaces = os.networkInterfaces();
+  for (const name of Object.keys(interfaces)) {
+    for (const iface of interfaces[name]) {
+      if (iface.family === 'IPv4' && !iface.internal) {
+        if (iface.mac.toLowerCase() === targetMac.toLowerCase()) {
+          return iface.address;
+        }
+      }
+    }
+  }
+  return null;
+}
+
 // Start HTTP server
-server.listen(PORT, '0.0.0.0', () => {
-  console.log(`Call forwarding HTTP app listening on 0.0.0.0:${PORT}`);
+const bindingIp = '192.168.86.59';
+
+server.listen(PORT, bindingIp, () => {
+  console.log(`Call forwarding HTTP app listening ONLY on specified interface (${bindingIp}:${PORT})`);
   console.log(`Webhook URL: ${process.env.BASE_URL}/voice`);
-  console.log(`Dashboard: http://localhost:${PORT}`);
+  console.log(`Dashboard: http://${bindingIp}:${PORT}`);
 });
 
 // Graceful shutdown
