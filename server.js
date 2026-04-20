@@ -297,6 +297,9 @@ app.post('/handle-gather', async (req, res) => {
         timestamp: new Date().toISOString()
       });
 
+      // Update call log to show it was rejected due to no speech
+      await database.logCall(fromNumber, 'Rejected', 'No speech detected');
+
       const twiML = twiMLHelpers.generateRejectionTwiML();
       res.set('Content-Type', 'text/xml');
       res.send(twiML);
